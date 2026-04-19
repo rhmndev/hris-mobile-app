@@ -5,9 +5,16 @@ const router = createRouter({
     routes: [
             {
             path: '/',
-            name: 'home',
-            component: () => import('../views/SplashView.vue'),
+            name: 'splash',
+            component: () => import('../views/LoginView.vue'),
             },
+            {
+            path: '/login',
+            name: 'login',
+            component: () => import('../views/LoginView.vue'),
+            },
+
+            
     ],
 });
 
