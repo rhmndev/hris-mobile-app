@@ -3,46 +3,46 @@
     themes: light --default, dark;
 };
 
-/* Custom theme colors for primary (coral theme) */
+/* Custom theme colors for primary (navy & forest green theme) */
 @theme {
-  --color-primary: #FF7F50;
+  --color-primary: #1F2567;
   --color-primary-content: #ffffff;
-  --color-secondary: #E5704A;
-  --color-accent: #FFA07A;
+  --color-secondary: #1D711A;
+  --color-accent: #FFFFFF;
 }
 
-/* Override DaisyUI theme colors */
+/* Override DaisyUI theme colors using OKLCH (disesuaikan dengan Navy & Green) */
 :root, [data-theme] {
-  --p: 0.7 0.15 40;
+  --p: 0.35 0.15 260; /* OKLCH untuk Navy Blue */
   --pc: 1 0 0;
-  --s: 0.65 0.14 35;
+  --s: 0.45 0.14 145; /* OKLCH untuk Forest Green */
   --sc: 1 0 0;
-  --a: 0.8 0.12 45;
-  --ac: 0.3 0.02 40;
+  --a: 1 0 0;
+  --ac: 0.2 0.02 260;
 }
 
 /* Fallback for hex colors */
 .btn-primary {
-  background-color: #FF7F50 !important;
-  border-color: #FF7F50 !important;
+  background-color: #1F2567 !important;
+  border-color: #1F2567 !important;
   color: #ffffff !important;
 }
 
 .btn-primary:hover {
-  background-color: #E5704A !important;
-  border-color: #E5704A !important;
+  background-color: #161a4a !important; /* Biru Navy yang lebih gelap saat hover */
+  border-color: #161a4a !important;
 }
 
 .bg-primary {
-  background-color: #FF7F50 !important;
+  background-color: #1F2567 !important;
 }
 
 .text-primary {
-  color: #FF7F50 !important;
+  color: #1F2567 !important;
 }
 
 .border-primary {
-  border-color: #FF7F50 !important;
+  border-color: #1F2567 !important;
 }
 
 #app {

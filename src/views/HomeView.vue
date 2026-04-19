@@ -1,7 +1,8 @@
 <script setup lang="ts">
     import { computed, ref} from 'vue';
     import { useRouter } from 'vue-router';
-import AttendanceCard from '../components/AttendanceCard.vue';
+    import AttendanceCard from '../components/AttendanceCard.vue';
+    import BottomNavigation from '../components/BottomNavigation.vue';
 
     const router = useRouter();
 
@@ -114,7 +115,7 @@ import AttendanceCard from '../components/AttendanceCard.vue';
         </div>
 
         <!-- Bottom Navigation Section -->
-        
+        <BottomNavigation />
 
     </div>
 
