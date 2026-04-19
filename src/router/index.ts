@@ -6,7 +6,7 @@ const router = createRouter({
             {
             path: '/',
             name: 'splash',
-            component: () => import('../views/LoginView.vue'),
+            component: () => import('../views/HomeView.vue'),
             },
             {
             path: '/login',
