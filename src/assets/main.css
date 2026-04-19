@@ -1,2 +1,61 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+    themes: light --default, dark;
+};
+
+/* Custom theme colors for primary (coral theme) */
+@theme {
+  --color-primary: #FF7F50;
+  --color-primary-content: #ffffff;
+  --color-secondary: #E5704A;
+  --color-accent: #FFA07A;
+}
+
+/* Override DaisyUI theme colors */
+:root, [data-theme] {
+  --p: 0.7 0.15 40;
+  --pc: 1 0 0;
+  --s: 0.65 0.14 35;
+  --sc: 1 0 0;
+  --a: 0.8 0.12 45;
+  --ac: 0.3 0.02 40;
+}
+
+/* Fallback for hex colors */
+.btn-primary {
+  background-color: #FF7F50 !important;
+  border-color: #FF7F50 !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover {
+  background-color: #E5704A !important;
+  border-color: #E5704A !important;
+}
+
+.bg-primary {
+  background-color: #FF7F50 !important;
+}
+
+.text-primary {
+  color: #FF7F50 !important;
+}
+
+.border-primary {
+  border-color: #FF7F50 !important;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}

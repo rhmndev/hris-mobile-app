@@ -1,0 +1,21 @@
+import { createRouter, createWebHistory } from 'vue-router';
+
+const router = createRouter({
+    history: createWebHistory(import.meta.env.BASE_URL),
+    routes: [
+            {
+            path: '/',
+            name: 'home',
+            component: () => import('../views/SplashView.vue'),
+            },
+    ],
+});
+
+// Navigation Guard
+router.beforeEach((to, from, next) => {
+    // Add your authentication logic here
+
+    next(); 
+});
+
+export default router;
