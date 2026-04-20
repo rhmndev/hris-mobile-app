@@ -17,7 +17,7 @@ export interface User {
 export interface LoginResponse {
     success: boolean
     message: string
-    date: {
+    data: {
         user: User
         access_token: string
     }
@@ -31,7 +31,5 @@ export interface LogoutResponse {
 export interface GetMeResponse {
     success: boolean;
     message: string;
-    data: {
-        user: User;
-    };
+    data: User;
 }

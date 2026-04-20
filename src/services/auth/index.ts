@@ -3,7 +3,7 @@ import type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse } from 
 
 class AuthService {
     async login(credentials: LoginRequest): Promise<LoginResponse> {
-        return httpClient.post<LoginResponse>('/auth/login', credentials)
+        return httpClient.post<LoginResponse>('/login', credentials)
     }
 
     async logout(): Promise<LogoutResponse> {

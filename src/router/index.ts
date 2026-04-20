@@ -6,12 +6,17 @@ const router = createRouter({
             {
             path: '/',
             name: 'splash',
-            component: () => import('../views/HomeView.vue'),
+            component: () => import('../views/SplashView.vue'),
             },
             {
             path: '/login',
             name: 'login',
             component: () => import('../views/LoginView.vue'),
+            },
+            {
+                path: '/home',
+                name: 'home',
+                component: () => import('../views/HomeView.vue'),
             },
             {
                 path: '/report',
@@ -33,10 +38,10 @@ const router = createRouter({
 });
 
 // Navigation Guard
-router.beforeEach((to, from, next) => {
-    // Add your authentication logic here
+// router.beforeEach((to, from, next) => {
+//     // Add your authentication logic here
 
-    next(); 
-});
+//     next(); 
+// });
 
 export default router;

@@ -5,9 +5,9 @@
     const router = useRouter()
 
     const mockUser = {
-        name: "Rahman Nurhadi",
+        name: "User Testing 02",
         role: "Employee",
-        email: "rahman@gmail.com",
+        email: "testing02@gmail.com",
         employee_id: "DRM-0101"
     }
 

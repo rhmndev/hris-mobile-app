@@ -7,7 +7,7 @@
     const router = useRouter();
 
     const mockUser = {
-        name: "Rahman Nurhadi",
+        name: "User Testing",
         role: "Employee"
     }
 
@@ -22,7 +22,7 @@
     const hasCheckIn = ref(false)
     const loading = ref(false)
     const currentTime = ref (new Date())
-    const activeTab= ref('home')
+    // const activeTab= ref('home')
 
     setInterval(() => {
         currentTime.value = new Date()
@@ -48,13 +48,13 @@
         router.push('/attendance')
     }
 
-    const goToProfile = () => {
-        router.push('/profile')
-    }
+    // const goToProfile = () => {
+    //     router.push('/profile')
+    // }
 
-    const goToReport = () => {
-        router.push('/report')
-    }
+    // const goToReport = () => {
+    //     router.push('/report')
+    // }
 
 </script>
 
@@ -94,7 +94,7 @@
                 </div>
 
                 <!-- Button Section -->
-                <button class="btn btn-primary btn-lg w-full">Check In</button>
+                <button class="btn btn-primary btn-lg w-full" @click="goToAttendance">Check In</button>
             </div>
         </div>
     </div>

@@ -4,11 +4,11 @@ const config: CapacitorConfig = {
   appId: 'com.example.app',
   appName: 'hris-mobile-app',
   webDir: 'dist',
-  server: {
-    // Masukkan IP Laptop kamu dan port Vite di sini
-    url: 'http://192.168.88.253:5173', 
-    cleartext: true
-  }
+  // server: {
+  //   // Masukkan IP Laptop kamu dan port Vite di sini
+  //   url: 'http://192.168.88.253:5173', 
+  //   cleartext: true
+  // }
 };
 
 export default config;
