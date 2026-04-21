@@ -3,7 +3,8 @@ import type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse } from 
 
 class AuthService {
     async login(credentials: LoginRequest): Promise<LoginResponse> {
-        return httpClient.post<LoginResponse>('/login', credentials)
+        // Alamat lengkap menjadi: http://127.0.0.1:8000/api/auth/login
+        return httpClient.post<LoginResponse>('/auth/login', credentials)
     }
 
     async logout(): Promise<LogoutResponse> {
@@ -16,4 +17,5 @@ class AuthService {
 }
 
 export const authService = new AuthService()
+
 export * from './types'

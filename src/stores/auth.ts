@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { authService, type User } from '../services'
+import router from '../router'
 
 const USER_STORAGE_KEY = 'auth_user'
 
@@ -51,23 +52,32 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     const login = async (email: string, password: string) => {
-        isLoading.value = true
-        error.value = null
+    isLoading.value = true
+    error.value = null
 
-        try {
-            const response = await authService.login({ email, password })
-            token.value = response.data.access_token
-            localStorage.setItem('auth_token', token.value)
+    try {
+        const response = await authService.login({ email, password })
+        
+        // Ambil dari response.data.access_token (sesuai JSON Laravel di atas)
+        const receivedToken = response.data.access_token
+        
+        if (receivedToken) {
+            token.value = receivedToken
+            localStorage.setItem('auth_token', receivedToken)
             saveUserToStorage(response.data.user)
-            return {success: true}
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'An error occurred'
-            error.value = errorMessage
-            return {success: false, message: errorMessage}
-        } finally {
-            isLoading.value = false
+            user.value = response.data.user
+            return { success: true }
+        } else {
+            throw new Error('Token tidak ditemukan dalam respon')
         }
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'An error occurred'
+        error.value = errorMessage
+        return { success: false, message: errorMessage }
+    } finally {
+        isLoading.value = false
     }
+}
 
     const logout = async () => {
         try {
@@ -80,7 +90,10 @@ export const useAuthStore = defineStore('auth', () => {
             token.value = null
             user.value = null
             localStorage.removeItem('auth_token')
+            localStorage.removeItem('auth_user')
             clearUserFromStorage()
+
+            router.push('/login')
         }
     }
 
@@ -99,5 +112,5 @@ export const useAuthStore = defineStore('auth', () => {
         login,
         logout,
         updateUser
-    }
+    }   
 })

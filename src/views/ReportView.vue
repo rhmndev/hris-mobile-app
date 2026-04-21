@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { ref, computed, onMounted} from 'vue'
+    import { ref, computed, onMounted} from 'vue' // <<-- add "watch" varibale here
     import { useRouter } from 'vue-router'
     import BottomNavigation from '../components/BottomNavigation.vue'
     import AttendanceCard from '../components/AttendanceCard.vue'
@@ -7,8 +7,10 @@
 
     const router = useRouter();
 
+
     const attendanceHistory = ref<Attendance[]>([])
     const loading = ref(true)
+
     const currentDate = new Date()
     const selectedMonth = ref(currentDate.getMonth() + 1)
     const selectedYear = ref(currentDate.getFullYear())
@@ -43,7 +45,7 @@
         const data = filteredAttendance.value
         const present = data.filter((a) => a.status === 'on_time' && !a.is_late).length
         const absent = data.filter(a => a.status === 'absent').length
-        const late = data.filter(a => a.is_late).length
+        const late = data.filter(a => a.status === 'late' && !a.is_late).length
         return { present, late, absent, total: data.length }
     })
 

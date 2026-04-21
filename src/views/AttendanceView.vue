@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import {  Geolocation } from '@capacitor/geolocation';
+import { attendanceService, type Attendance } from '../services';
 
 const router = useRouter()
 
 // Mockup state
-const hasCheckedIn = ref(false)
+const todayAttendance = ref<Attendance | null>(null)
 const loading = ref(false)
 const submitting = ref(false)
 const error = ref<string | null>(null)
@@ -13,10 +15,7 @@ const success = ref<string | null>(null)
 
 const currentTime = ref(new Date())
 const photoBase64 = ref<string | null>(null)
-const location = ref<{ latitude: number; longitude: number } | null>({
-  latitude: -6.200000,
-  longitude: 106.816666,
-})
+const location = ref<{ latitude: number; longitude: number } | null>(null)
 
 // Update time every second
 setInterval(() => {
@@ -39,53 +38,129 @@ const formattedDate = computed(() => {
   })
 })
 
+const hasCheckedIn = computed(() => !!todayAttendance.value?.check_in_time)
+
 const canSubmit = computed(() => {
   return photoBase64.value && location.value && !submitting.value
 })
 
+const fetchTodayAttendance = async () => {
+  loading.value = true
+  try {
+    const res = await attendanceService.getToday()
+    todayAttendance.value = res.data
+  } catch (err) {
+    console.error('Failed to fetch today attendance:', err)
+  } finally {
+    loading.value = false
+  }
+}
+
+const getCurrentLocation = async () => {
+  try {
+    const position = await Geolocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 10000,
+    })
+    location.value = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+    }
+    console.log('Current location:', {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+    })
+  } catch (error) {
+    console.error('Failed to get current location:', error)
+    location.value = null
+  }
+}
+
 const takePhoto = () => {
-  // Mockup - set dummy photo
-  photoBase64.value = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCABAAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD6RooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP/9k='
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.capture = 'user'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            const result = reader.result
+          const base64String = result.includes(',') ? result.split(',')[1] : result
+          photoBase64.value = base64String
+        }
+      }
+        reader.readAsDataURL(file)
+    }
+  }
+  input.click()
 }
 
-const handleCheckIn = () => {
+const handleCheckIn = async () => {
   if (!canSubmit.value) return
 
   submitting.value = true
   error.value = null
   success.value = null
 
-  // Mockup - simulate API call
-  setTimeout(() => {
-    success.value = 'Check-in berhasil!'
-    hasCheckedIn.value = true
-    submitting.value = false
-    
+  try {
+    const res = await attendanceService.checkIn({
+      photo: photoBase64.value!,
+      latitude: location.value!.latitude,
+      longitude: location.value!.longitude,
+    })
+
+    success.value = res.message || 'Check-in berhasil!'
+    todayAttendance.value = res.data
+    photoBase64.value = null
+
     setTimeout(() => {
-      router.push('/home')
-    }, 2000)
-  }, 1500)
+      router.push('/home');
+    }, 2000);
+
+  } catch (err) {
+    console.error('Failed to check in:', err)
+    error.value = 'Gagal melakukan check-in, silahkan dicoba lagi.'
+  } finally {
+    submitting.value = false
+  }
 }
 
-const handleCheckOut = () => {
+const handleCheckOut = async () => {
   if (!canSubmit.value) return
 
   submitting.value = true
   error.value = null
   success.value = null
 
-  // Mockup - simulate API call
-  setTimeout(() => {
-    success.value = 'Check-out berhasil!'
-    submitting.value = false
-    
+  try {
+    const res = await attendanceService.checkOut({
+      photo: photoBase64.value!,
+      latitude: location.value!.latitude,
+      longitude: location.value!.longitude,
+    })
+
+    success.value = res.message || 'Check-out berhasil!'
+    todayAttendance.value = res.data
+    photoBase64.value = null
+
+  } catch (err) {
+    console.error('Failed to check out:', err)
+    error.value = 'Gagal melakukan check-out, silahkan dicoba lagi.'
+  }
     setTimeout(() => {
-      router.push('/home')
-    }, 2000)
-  }, 1500)
-}
+      router.push('/home');
+    }, 2000);
+  }
 
 const goBack = () => router.push('/home')
+
+onMounted (() => {
+  fetchTodayAttendance()
+  getCurrentLocation()
+})
 </script>
 
 <template>

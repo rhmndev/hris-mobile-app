@@ -1,17 +1,15 @@
 <script setup lang="ts">
     import { useRouter } from 'vue-router'
     import BottomNavigation from '../components/BottomNavigation.vue'
+    import { useAuthStore } from '../stores/auth'
 
-    const router = useRouter()
+    const router = useRouter();
+    const authStore = useAuthStore();
 
-    const mockUser = {
-        name: "User Testing 02",
-        role: "Employee",
-        email: "testing02@gmail.com",
-        employee_id: "DRM-0101"
-    }
+   
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        await authStore.logout();
         router.push('/login')
     }
 
@@ -21,7 +19,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen bg-bas-200 pb-24">
+    <div class="min-h-screen bg-base-200 pb-24">
         <!-- Header -->
          <div class="bg-primary text-primary-content pt-12 px-4 pb-8">
             <div class="flex items-center gap-4 mb-6">
@@ -35,11 +33,11 @@
             <div class="flex flex-col items-center">
                 <div class="avatar placeholder mb-4">
                     <div class="bg-blue-400 text-white rounded-full w-24">
-                        <span class="text-3xl font-bold">{{ mockUser.name.charAt(0) }}</span>
+                        <span class="text-3xl font-bold">{{ authStore.user?.name.charAt(0) }}</span>
                     </div>
                 </div>
-                <h2 class="text-lg font-semibold">{{ mockUser.name }}</h2>
-                <p class="text-sm opacity-80 mb-4">{{ mockUser.email }}</p>
+                <h2 class="text-lg font-semibold">{{ authStore.user?.name }}</h2>
+                <p class="text-sm opacity-80 mb-4">{{ authStore.user?.email }}</p>
             </div>
          </div>
 
@@ -56,7 +54,7 @@
                     </div>
                     <div class="flex-1">
                     <p class="text-xs text-base-content/60">Email</p>
-                    <p class="font-medium">{{ mockUser.email }}</p>
+                    <p class="font-medium">{{ authStore.user?.email }}</p>
                     </div>
                 </div>
 
@@ -69,7 +67,7 @@
                     </div>
                     <div class="flex-1">
                     <p class="text-xs text-base-content/60">Employee ID</p>
-                    <p class="font-medium">{{ mockUser.employee_id }}</p>
+                    <p class="font-medium">{{ authStore.user?.employee_id }}</p>
                     </div>
                 </div>
                 </div>
@@ -84,7 +82,7 @@
             </button>
 
             <!-- App Version -->
-            <p class="text-center text-xs text-base-content/40 mt-8">Version v1.0.0</p>
+            <p class="text-center text-xs text-base-content/40 mt-8">Version App v1.0.0</p>
         </div>
 
 

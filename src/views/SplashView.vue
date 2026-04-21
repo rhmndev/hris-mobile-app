@@ -1,15 +1,24 @@
 <script setup lang="ts">
     import { onMounted, ref } from 'vue';
     import { useRouter } from 'vue-router';
+    import { useAuthStore} from '../stores/auth';
 
     const router = useRouter();
     const isVisible = ref(true);
+    const authStore = useAuthStore();
 
-    onMounted(() => {
+    onMounted(async () => {
+        if (authStore.token) {
+            await authStore.initAuth();
+        }
         setTimeout(() => {
             isVisible.value = false;
            setTimeout(() => {
-                router.push('/login');
+                if (authStore.isAuthenticated) {
+                    router.push('/home');
+                } else {
+                    router.push('/login');
+                }
             }, 300);
         }, 2000);
     });
