@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
+    "@capacitor/camera": "^8.1.0",
     "@capacitor/core": "^8.3.1",
     "@capacitor/geolocation": "^8.2.0",
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/face_mesh": "^0.4.1633559619",
     "@tailwindcss/postcss": "^4.2.2",
     "pinia": "^3.0.4",
     "vue": "^3.5.32",

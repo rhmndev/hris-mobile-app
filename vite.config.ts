@@ -8,4 +8,10 @@ export default defineConfig({
     vue(), 
     tailwindcss()
   ],
+  build: {
+    rollupOptions: {
+      // Beritahu Vite bahwa modul ini ada di luar (global window)
+      external: ['@mediapipe/face_mesh', '@mediapipe/camera_utils'],
+    },
+  },
 })

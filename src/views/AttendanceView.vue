@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {  Geolocation } from '@capacitor/geolocation';
 import { attendanceService, type Attendance } from '../services';
+import LivenessDetection from '../components/LivenessDetection.vue';
 
 const router = useRouter()
 
@@ -16,6 +17,9 @@ const success = ref<string | null>(null)
 const currentTime = ref(new Date())
 const photoBase64 = ref<string | null>(null)
 const location = ref<{ latitude: number; longitude: number } | null>(null)
+
+const showLivenessDetection = ref(false);
+
 
 // Update time every second
 setInterval(() => {
@@ -76,27 +80,47 @@ const getCurrentLocation = async () => {
   }
 }
 
-const takePhoto = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'image/*'
-    input.capture = 'user'
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        const reader = new FileReader()
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            const result = reader.result
-          const base64String = result.includes(',') ? result.split(',')[1] : result
-          photoBase64.value = base64String
-        }
-      }
-        reader.readAsDataURL(file)
-    }
+// const takePhoto = () => {
+//     const input = document.createElement('input')
+//     input.type = 'file'
+//     input.accept = 'image/*'
+//     input.capture = 'user'
+//     input.onchange = (e) => {
+//       const file = (e.target as HTMLInputElement).files?.[0]
+//       if (file) {
+//         const reader = new FileReader()
+//         reader.onload = () => {
+//           if (typeof reader.result === 'string') {
+//             const result = reader.result
+//           const base64String = result.includes(',') ? result.split(',')[1] : result
+//           photoBase64.value = base64String
+//         }
+//       }
+//         reader.readAsDataURL(file)
+//     }
+//   }
+//   input.click()
+// }
+
+const openLivenessDetection = () => {
+  showLivenessDetection.value = true;
+};
+
+const onLivenessSuccess = (photo : string) => {
+  photoBase64.value = photo;
+  showLivenessDetection.value = false;
+
+  if (!hasCheckedIn.value) {
+    handleCheckIn();
+  } else {
+    handleCheckOut();
   }
-  input.click()
 }
+
+const onLivenessCancel = () => {
+  showLivenessDetection.value = false;
+}
+
 
 const handleCheckIn = async () => {
   if (!canSubmit.value) return
@@ -233,7 +257,7 @@ onMounted (() => {
             </div>
 
             <!-- Take Photo Button -->
-            <button v-else class="btn btn-outline btn-primary w-full h-32" @click="takePhoto">
+            <button v-else class="btn btn-outline btn-primary w-full h-32" @click="openLivenessDetection">
               <div class="flex flex-col items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -265,8 +289,8 @@ onMounted (() => {
         <button
           v-if="!hasCheckedIn"
           class="btn btn-primary btn-lg w-full"
-          :disabled="!canSubmit"
-          @click="handleCheckIn"
+          :disabled="submitting"
+          @click="openLivenessDetection"
         >
           <span v-if="submitting" class="loading loading-spinner"></span>
           {{ submitting ? 'Memproses...' : 'Check In' }}
@@ -275,13 +299,21 @@ onMounted (() => {
         <button
           v-else
           class="btn btn-secondary btn-lg w-full"
-          :disabled="!canSubmit"
-          @click="handleCheckOut"
+          :disabled="submitting"
+          @click="openLivenessDetection"
         >
           <span v-if="submitting" class="loading loading-spinner"></span>
           {{ submitting ? 'Memproses...' : 'Check Out' }}
         </button>
       </div>
     </div>
+    
+<LivenessDetection
+  v-if="showLivenessDetection"
+  class="z-[100]" 
+  @success="onLivenessSuccess"
+  @cancel="onLivenessCancel"
+/>
+
   </div>
 </template>

@@ -2,15 +2,46 @@
     import { useRouter } from 'vue-router'
     import BottomNavigation from '../components/BottomNavigation.vue'
     import { useAuthStore } from '../stores/auth'
+    import { authService } from '../services';
+    import { onMounted, ref } from 'vue';
 
     const router = useRouter();
     const authStore = useAuthStore();
+    const loading = ref(false);
+    const isLoggingOut = ref(false);
 
-   
+    const fetchUserData = async () => {
+        loading.value = true;
+        try {
+            const response = await authService.getMe();
+            authStore.updateUser(response.data);
+        } catch (error) {
+            console.error('Failed to fetch user data:', error);
+            if (error instanceof Error && error.message.includes('401')) {
+                await authStore.logout();
+                router.push('/login');
+            }
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    onMounted(() => {
+        fetchUserData();
+    });
 
     const handleLogout = async () => {
-        await authStore.logout();
-        router.push('/login')
+        isLoggingOut.value = true; // Aktifkan loading
+        try {
+            await authStore.logout();
+            // Beri sedikit delay (opsional) agar user melihat spinner-nya
+            await new Promise(resolve => setTimeout(resolve, 800));
+            router.push('/login');
+        } catch (error) {
+            console.error('Logout failed:', error);
+        } finally {
+            isLoggingOut.value = false;
+        }
     }
 
     const goBack = () => {
@@ -33,7 +64,7 @@
             <div class="flex flex-col items-center">
                 <div class="avatar placeholder mb-4">
                     <div class="bg-blue-400 text-white rounded-full w-24">
-                        <span class="text-3xl font-bold">{{ authStore.user?.name.charAt(0) }}</span>
+                        <span class="text-6xl font-bold flex items-center justify-center h-full">{{ authStore.user?.name.charAt(0) }}</span>
                     </div>
                 </div>
                 <h2 class="text-lg font-semibold">{{ authStore.user?.name }}</h2>
@@ -74,12 +105,15 @@
             </div>
 
             <!-- Logout Button -->
-            <button class="btn btn-error btn-outline w-full mt-6" @click="handleLogout">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Logout
-            </button>
+        <button class="btn btn-error btn-outline w-full mt-6" @click="handleLogout" :disabled="isLoggingOut">
+            <span v-if="isLoggingOut" class="loading loading-spinner"></span>
+                <template v-else>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Logout
+                </template>
+        </button>
 
             <!-- App Version -->
             <p class="text-center text-xs text-base-content/40 mt-8">Version App v1.0.0</p>

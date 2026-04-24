@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { ref, computed, onMounted} from 'vue' // <<-- add "watch" varibale here
+    import { ref, computed, onMounted, watch} from 'vue'
     import { useRouter } from 'vue-router'
     import BottomNavigation from '../components/BottomNavigation.vue'
     import AttendanceCard from '../components/AttendanceCard.vue'
@@ -34,25 +34,18 @@
         return Array.from({ length: 3 }, (_, i) => currentYear - i)
     })
 
-    const filteredAttendance = computed(() => {
-        return attendanceHistory.value.filter(attendance => {
-            const date = new Date(attendance.attendance_date)
-            return date.getMonth() + 1 === selectedMonth.value && date.getFullYear() === selectedYear.value
-        })
-    })
-
     const stats = computed(() => {
-        const data = filteredAttendance.value
-        const present = data.filter((a) => a.status === 'on_time' && !a.is_late).length
+        const data = attendanceHistory.value
+        const present = data.filter((a) => a.status === 'on_time').length
         const absent = data.filter(a => a.status === 'absent').length
-        const late = data.filter(a => a.status === 'late' && !a.is_late).length
+        const late = data.filter(a => a.status === 'late').length
         return { present, late, absent, total: data.length }
     })
 
     const fetchAttendanceHistory = async () => {
         loading.value = true
         try {
-            const res = await attendanceService.getHistory()
+            const res = await attendanceService.getHistory(1, selectedMonth.value, selectedYear.value)
             attendanceHistory.value = res.data
         } catch(error) {
             console.log('Error fetching attendance history:', error)
@@ -65,6 +58,11 @@
 
     onMounted(() => {
         fetchAttendanceHistory()
+    })
+
+    watch([selectedMonth, selectedYear], () => {
+        fetchAttendanceHistory()
+
     })
 
 </script>
@@ -125,19 +123,19 @@
          <div class="p-4">
             <h2 class="font-semibold mb-3 text-base-content">
                 Attendance History
-                <span class="text-base-content/60 font-normal">({{ filteredAttendance.length }} Records)</span>
+                <span class="text-base-content/60 font-normal">({{ attendanceHistory.length }} Records)</span>
             </h2>
             <div v-if="loading" class="flex justify-center py-8">
                 <span class="loading loading-spinner loading-lg text-primary"></span>
             </div>
 
-            <div v-else-if="filteredAttendance.length === 0" class="text-center py-8 text-base-content/60">
+            <div v-else-if="attendanceHistory.length === 0" class="text-center py-8 text-base-content/60">
                 No attendance records found for the selected month and year.
             </div>
 
              <div v-else class="space-y-3">
                 <AttendanceCard
-                v-for="attendance in filteredAttendance"
+                v-for="attendance in attendanceHistory"
                 :key="attendance.id"
                 :attendance="attendance"
                 />

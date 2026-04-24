@@ -22,8 +22,14 @@ class AttendanceService {
   /**
    * Get attendance history with pagination
    */
-  async getHistory(page: number = 1): Promise<AttendanceHistoryResponse> {
-    return httpClient.get<AttendanceHistoryResponse>(`/attendance/history?page=${page}`)
+  async getHistory(page: number = 1, month?: number, year?: number): Promise<AttendanceHistoryResponse> {
+    const params = new URLSearchParams();
+    if (page) params.append('page', page.toString());
+    if (month) params.append('month', month.toString());
+    if (year) params.append('year', year.toString());
+
+    const queryString = params.toString();
+    return httpClient.get<AttendanceHistoryResponse>(`/attendance/history${queryString ? `?${queryString}` : ''}`);
   }
 
   /**

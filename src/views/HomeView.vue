@@ -5,11 +5,12 @@
     import BottomNavigation from '../components/BottomNavigation.vue';
     import { useAuthStore } from '../stores/auth';
     import { attendanceService, type Attendance } from '../services';
+    
 
     const router = useRouter();
     const authStore = useAuthStore();
 
-    const todayAtendance = ref<Attendance | null>(null);
+    const todayAttendance = ref<Attendance | null>(null);
     const attendanceHistory = ref<Attendance []>([]);
     const loading = ref(true);
     const currentTime = ref(new Date());
@@ -45,21 +46,21 @@
     }
 
     const checkInTime = computed(() => {
-        if (todayAtendance.value?.check_in_time) {
-            return formatTime(todayAtendance.value.check_in_time);
+        if (todayAttendance.value?.check_in_time) {
+            return formatTime(todayAttendance.value.check_in_time);
         }
         return '--:--';
     });
 
     const checkOutTime = computed(() => {
-        if (todayAtendance.value?.check_out_time) {
-            return formatTime(todayAtendance.value.check_out_time);
+        if (todayAttendance.value?.check_out_time) {
+            return formatTime(todayAttendance.value.check_out_time);
         }
         return '--:--';
     });
 
     const hasCheckedIn = computed(() => {
-        return !!todayAtendance.value?.check_in_time
+        return !!todayAttendance.value?.check_in_time
     })
 
     const fetchData = async () => {
@@ -69,7 +70,7 @@
                 attendanceService.getToday(),
                 attendanceService.getHistory()
             ]);
-            todayAtendance.value = todayRes.data;
+            todayAttendance.value = todayRes.data;
             attendanceHistory.value = historyRes.data;
         } catch (error) {
             console.error('Error fetching attendance data:', error);
@@ -132,13 +133,13 @@
                 <!-- Button Section -->
                 <button 
                 v-if="!hasCheckedIn"    
-                class="btn btn-primary btn-lg w-full" 
+                class="btn btn-success btn-lg w-full" 
                 @click="goToAttendance">
                     Check In
                 </button>
                 <button 
                 v-else
-                class="btn btn-warning btn-lg w-full" 
+                class="btn btn-error btn-lg w-full" 
                 @click="goToAttendance">
                     Check Out
                 </button>

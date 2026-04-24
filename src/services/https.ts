@@ -3,8 +3,11 @@
  * Handles all HTTP requests with authentication and error handling
  */
 
+import { useAuthStore } from '../stores/auth';
+import router from '../router';
+
 const API_BASE_URL = 'https://process-stench-galvanize.ngrok-free.dev/api'
-// const API_BASE_URL = 'http://127.0.0.1:8000/api'
+// const API_BASE_URL = 'http://192.168.110.55:8000/api'
 
 
 class HttpClient {
@@ -36,6 +39,34 @@ class HttpClient {
     return headers
   }
 
+  private async handleResponse<T>(response: Response): Promise<T> {
+    // console.log('>>> HTTP Response:', response)
+    if (response.status === 401) {
+      const authStore = useAuthStore();
+     if (router.currentRoute.value.path !== '/login') {
+          authStore.logout();
+          router.push('/login')
+        }
+      throw new Error('SESSION EXPIRED!. Please login again with your account.')
+    }
+
+    let data: any
+    try {
+      data = await response.json();
+    } catch (error) {
+      if (!response.ok) {
+        throw new Error(`HTTP error! with status: ${response.status} - ${response.statusText}`);
+      }
+      throw error;
+    }
+
+    if (!response.ok) {
+      throw new Error(data.message || 'An error occurred');
+    }
+    
+    return data as T;
+  }
+
   async get<T>(endpoint: string): Promise<T> {
     const url = `${this.baseURL}${endpoint}`
 
@@ -44,13 +75,7 @@ class HttpClient {
       headers: this.getHeaders(),
     })
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.message || 'An error occurred')
-    }
-
-    return data as T
+    return this.handleResponse<T>(response);
   }
 
   async post<T>(endpoint: string, body?: object): Promise<T> {
@@ -62,13 +87,7 @@ class HttpClient {
       body: body ? JSON.stringify(body) : undefined,
     })
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.message || 'An error occurred')
-    }
-
-    return data as T
+    return this.handleResponse<T>(response);
   }
 
   async postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
@@ -80,13 +99,7 @@ class HttpClient {
       body: formData,
     })
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.message || 'An error occurred')
-    }
-
-    return data as T
+   return this.handleResponse<T>(response);
   }
 
   /**

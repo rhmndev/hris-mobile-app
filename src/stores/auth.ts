@@ -58,7 +58,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
         const response = await authService.login({ email, password })
         
-        // Ambil dari response.data.access_token (sesuai JSON Laravel di atas)
         const receivedToken = response.data.access_token
         
         if (receivedToken) {
@@ -80,12 +79,13 @@ export const useAuthStore = defineStore('auth', () => {
 }
 
     const logout = async () => {
+        isLoading.value = true
         try {
             if (token.value) {
                 await authService.logout()
             }
         } catch (err) {
-
+            console.error("Logout error:", err);
         } finally {
             token.value = null
             user.value = null
@@ -94,6 +94,7 @@ export const useAuthStore = defineStore('auth', () => {
             clearUserFromStorage()
 
             router.push('/login')
+            isLoading.value = false
         }
     }
 
