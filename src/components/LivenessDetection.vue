@@ -6,6 +6,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 type FaceMesh = any;
 type Camera = any;
 
+
 const emit = defineEmits<{
   (e: 'success', photoBase64: string): void
   (e: 'cancel'): void
@@ -14,7 +15,7 @@ const emit = defineEmits<{
 const videoRef = ref<HTMLVideoElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-type Step = 'instruction' | 'align' | 'blink' | 'left' | 'right' | 'success' | 'failed'
+type Step = 'instruction' | 'align' | 'blink' | 'left' | 'right' | 'finalize' | 'success' | 'failed'
 const step = ref<Step>('instruction')
 
 const instruction = ref('Siapkan wajah Anda di dalam frame')
@@ -99,7 +100,14 @@ function startCountdown(seconds: number) {
   if (countdownTick) clearInterval(countdownTick)
   countdownTick = window.setInterval(() => {
     countdown.value--
-    if (countdown.value <= 0) onFailed('Waktu habis. Silakan coba lagi.')
+    if (countdown.value <= 0) {
+      // Untuk step finalize, jika waktu habis tetap capture photo
+      if (step.value === 'finalize') {
+        onSuccess()
+      } else {
+        onFailed('Waktu habis. Silakan coba lagi.')
+      }
+    }
   }, 1000)
 }
 
@@ -131,6 +139,32 @@ function resetAll(keepCamera = true) {
   if (!keepCamera) stopCamera()
 }
 
+// async function initFaceMesh() {
+//   faceMesh = new FaceMesh({
+//     locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+//   })
+//   faceMesh.setOptions({
+//     maxNumFaces: 1,
+//     refineLandmarks: true,
+//     minDetectionConfidence: 0.7,
+//     minTrackingConfidence: 0.7,
+//   })
+//   faceMesh.onResults(onResults as any)
+// }
+
+// async function startCamera() {
+//   if (!videoRef.value) return
+//   camera = new Camera(videoRef.value, {
+//     onFrame: async () => {
+//       if (!faceMesh || !videoRef.value) return
+//       await faceMesh.send({ image: videoRef.value })
+//     },
+//     width: 640,
+//     height: 480,
+//   })
+//   await camera.start()
+// }
+
 async function initFaceMesh() {
     const MPFaceMesh = (window as any).FaceMesh;
   
@@ -152,6 +186,7 @@ async function initFaceMesh() {
   })
   faceMesh.onResults(onResults as any)
 }
+
 
 async function startCamera() {
   if (!videoRef.value) return;
@@ -176,6 +211,7 @@ async function startCamera() {
     await camera.start();
   }
 }
+
 
 function stopCamera() {
   try { camera?.stop() } catch {}
@@ -238,7 +274,7 @@ function onFailed(msg: string) {
  * MAIN
  */
 function onResults(results: Results) {
-  if (!['align', 'blink', 'left', 'right'].includes(step.value)) return
+  if (!['align', 'blink', 'left', 'right', 'finalize'].includes(step.value)) return
 
   const faces = results.multiFaceLandmarks
   if (!faces || faces.length === 0) {
@@ -356,10 +392,42 @@ function onResults(results: Results) {
   if (step.value === 'right') {
     if (RIGHT_OK) {
       holdFrames.value++
-      if (holdFrames.value >= 3) onSuccess()
+      if (holdFrames.value >= 3) {
+        // Masuk ke step finalize untuk memberi waktu user meluruskan kepala
+        enterStep('finalize', 'Luruskan kepala Anda kembali ke posisi netral', 5)
+      }
     } else {
       holdFrames.value = 0
     }
+    return
+  }
+
+  // ========= FINALIZE (wait for head to return to neutral)
+  if (step.value === 'finalize') {
+    if (!baselineReady.value) {
+      // Fallback jika baseline tidak ready
+      setTimeout(() => onSuccess(), 2000)
+      return
+    }
+
+    const ratio = headTurnRatio(lm)
+    if (ratio === null) return
+
+    const base = baselineRatio.value ?? ratio
+    const delta = Math.abs(ratio - base)
+
+    // Cek apakah kepala sudah kembali ke posisi netral (delta kecil)
+    const NEUTRAL_THRESHOLD = 0.15
+    if (delta < NEUTRAL_THRESHOLD) {
+      holdFrames.value++
+      if (holdFrames.value >= 5) {
+        // Kepala sudah lurus, tunggu sebentar lalu capture
+        setTimeout(() => onSuccess(), 500)
+      }
+    } else {
+      holdFrames.value = 0
+    }
+    return
   }
 }
 
@@ -377,7 +445,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black z-50 flex flex-col">
+  <div class="fixed inset-0 bg-black z-[9999] flex flex-col">
     <div class="bg-black/80 text-white p-4 flex items-center justify-between">
       <button class="btn btn-ghost btn-circle text-white" @click="cancel">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -388,29 +456,45 @@ onUnmounted(() => {
       <div class="w-12"></div>
     </div>
 
-    <div class="flex-1 relative overflow-hidden">
-      <video ref="videoRef" class="absolute inset-0 w-full h-full object-cover scale-x-[-1]" autoplay playsinline muted></video>
+    <div class="flex-1 relative overflow-hidden bg-black">
+      <!-- Video full screen untuk processing (tetap full untuk face detection) -->
+      <video 
+        ref="videoRef" 
+        class="absolute inset-0 w-full h-full object-cover scale-x-[-1]" 
+        autoplay 
+        playsinline 
+        muted
+      ></video>
       <canvas ref="canvasRef" class="hidden"></canvas>
 
+      <!-- Overlay hitam dengan hole elips di tengah (sesuai dengan border w-64 h-80) -->
+      <div 
+        class="absolute inset-0 pointer-events-none"
+        style="background: radial-gradient(ellipse 128px 160px at 50% 50%, transparent 0%, transparent 98%, rgba(0,0,0,0.98) 99%, rgba(0,0,0,0.98) 100%);"
+      ></div>
+
+      <!-- Border overlay -->
       <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div
-          class="w-64 h-80 border-4 rounded-full"
+          class="w-64 h-80 border-4 rounded-full pointer-events-none z-10"
           :class="{
             'border-white/50': step === 'instruction' || step === 'align',
             'border-yellow-400 animate-pulse': step === 'blink' || step === 'left' || step === 'right',
+            'border-blue-400 animate-pulse': step === 'finalize',
             'border-green-500': step === 'success',
             'border-red-500': step === 'failed'
           }"
         ></div>
       </div>
 
-      <div v-if="step === 'align' || step === 'blink' || step === 'left' || step === 'right'"
+      <div v-if="step === 'align' || step === 'blink' || step === 'left' || step === 'right' || step === 'finalize'"
         class="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div class="bg-black/70 px-6 py-4 rounded-2xl text-white text-xl font-bold text-center">
           <div v-if="step === 'align'">LURUSKAN WAJAH (NETRAL)</div>
           <div v-else-if="step === 'blink'">KEDIPKAN MATA</div>
           <div v-else-if="step === 'left'">PUTAR KE KIRI</div>
           <div v-else-if="step === 'right'">PUTAR KE KANAN</div>
+          <div v-else-if="step === 'finalize'">LURUSKAN KEPALA KEMBALI</div>
           <div class="text-white/70 text-sm font-normal mt-2">Pastikan wajah tetap di dalam frame</div>
         </div>
       </div>
@@ -433,7 +517,7 @@ onUnmounted(() => {
           Mulai Verifikasi
         </button>
 
-        <div v-else-if="step === 'align' || step === 'blink' || step === 'left' || step === 'right'"
+        <div v-else-if="step === 'align' || step === 'blink' || step === 'left' || step === 'right' || step === 'finalize'"
           class="flex items-center gap-2">
           <span class="loading loading-dots loading-lg text-primary"></span>
           <span>
@@ -441,7 +525,8 @@ onUnmounted(() => {
               step === 'align' ? 'Mendeteksi wajah...' :
               step === 'blink' ? 'Mendeteksi kedipan...' :
               step === 'left' ? 'Mendeteksi putar kiri...' :
-              'Mendeteksi putar kanan...'
+              step === 'right' ? 'Mendeteksi putar kanan...' :
+              'Menunggu kepala lurus...'
             }}
           </span>
         </div>

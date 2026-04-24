@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import {  Geolocation } from '@capacitor/geolocation';
 import { attendanceService, type Attendance } from '../services';
 import LivenessDetection from '../components/LivenessDetection.vue';
+import MapPreview from '../components/MapPreview.vue';
 
 const router = useRouter()
 
@@ -234,6 +235,18 @@ onMounted (() => {
                 <p v-else class="text-sm text-base-content/60">Mendapatkan lokasi...</p>
               </div>
             </div>
+
+            <div class="mt-3">
+              <MapPreview 
+              v-if="location"
+              :company-latitude="-6.11122773"
+              :company-longitude="106.98604606"
+              :company-radius="100"
+              :latitude="location.latitude"
+              :longitude="location.longitude"
+              :height="'250px'"/>
+            </div>
+
           </div>
         </div>
 
