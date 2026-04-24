@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import {  Geolocation } from '@capacitor/geolocation';
-import { attendanceService, type Attendance } from '../services';
+import { attendanceService, companyService, type Attendance, type Company } from '../services';
 import LivenessDetection from '../components/LivenessDetection.vue';
 import MapPreview from '../components/MapPreview.vue';
 
@@ -18,6 +18,7 @@ const success = ref<string | null>(null)
 const currentTime = ref(new Date())
 const photoBase64 = ref<string | null>(null)
 const location = ref<{ latitude: number; longitude: number } | null>(null)
+const company = ref<Company | null>(null);
 
 const showLivenessDetection = ref(false);
 
@@ -58,6 +59,15 @@ const fetchTodayAttendance = async () => {
     console.error('Failed to fetch today attendance:', err)
   } finally {
     loading.value = false
+  }
+}
+
+const fetchCompany = async () => {
+  try {
+    const res = await companyService.getCompany();
+    company.value = res.data;
+  } catch (error) {
+    console.error('Failed to fetch company data:', error);
   }
 }
 
@@ -185,6 +195,7 @@ const goBack = () => router.push('/home')
 onMounted (() => {
   fetchTodayAttendance()
   getCurrentLocation()
+  fetchCompany()
 })
 </script>
 
@@ -239,9 +250,9 @@ onMounted (() => {
             <div class="mt-3">
               <MapPreview 
               v-if="location"
-              :company-latitude="-6.11122773"
-              :company-longitude="106.98604606"
-              :company-radius="100"
+              :company-latitude="company ? parseFloat(company.latitude) : null"
+              :company-longitude="company ? parseFloat(company.longitude) : null"
+              :company-radius="company ? company.radius : 200"
               :latitude="location.latitude"
               :longitude="location.longitude"
               :height="'250px'"/>

@@ -6,6 +6,7 @@
 export { httpClient } from './https'
 export { authService } from './auth'
 export { attendanceService } from './attendance'
+export { companyService } from './company'
 
 // Re-export types
 export type { User, LoginRequest, LoginResponse } from './auth'
@@ -16,3 +17,5 @@ export type {
   TodayAttendanceResponse,
   AttendanceHistoryResponse,
 } from './attendance'
+
+export type { Company, CompanyResponse } from './company'
