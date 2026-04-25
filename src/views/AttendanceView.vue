@@ -18,10 +18,11 @@ const error = ref<string | null>(null)
 const success = ref<string | null>(null)
 
 const currentTime = ref(new Date())
-let timer: any = null
 const photoBase64 = ref<string | null>(null)
 const location = ref<{ latitude: number; longitude: number } | null>(null)
 const company = ref<Company | null>(null);
+let timer: any = null
+
 
 const showLivenessDetection = ref(false);
 const showFakeGpsAlert = ref(false);
@@ -152,28 +153,6 @@ const getCurrentLocation = async () => {
   }
 }
 
-// const takePhoto = () => {
-//     const input = document.createElement('input')
-//     input.type = 'file'
-//     input.accept = 'image/*'
-//     input.capture = 'user'
-//     input.onchange = (e) => {
-//       const file = (e.target as HTMLInputElement).files?.[0]
-//       if (file) {
-//         const reader = new FileReader()
-//         reader.onload = () => {
-//           if (typeof reader.result === 'string') {
-//             const result = reader.result
-//           const base64String = result.includes(',') ? result.split(',')[1] : result
-//           photoBase64.value = base64String
-//         }
-//       }
-//         reader.readAsDataURL(file)
-//     }
-//   }
-//   input.click()
-// }
-
 const openLivenessDetection = async () => {
   if (!canTakePhoto.value) {
     error.value = 'Anda tidak dapat melakukan presensi karena berada di luar radius perusahaan.';
@@ -268,7 +247,6 @@ onMounted (() => {
   fetchCompany()
   timer = setInterval(() => {
     currentTime.value = new Date();
-    console.log('Jam update...'); 
   }, 1000);
 
 

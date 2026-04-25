@@ -1,10 +1,11 @@
 <script setup lang="ts">
-    import { computed, ref, onMounted} from 'vue';
+    import { computed, ref, onMounted, onUnmounted } from 'vue';
     import { useRouter } from 'vue-router';
     import AttendanceCard from '../components/AttendanceCard.vue';
     import BottomNavigation from '../components/BottomNavigation.vue';
     import { useAuthStore } from '../stores/auth';
     import { attendanceService, type Attendance } from '../services';
+    
     
 
     const router = useRouter();
@@ -14,11 +15,9 @@
     const attendanceHistory = ref<Attendance []>([]);
     const loading = ref(true);
     const currentTime = ref(new Date());
+    let isMounted = false
+    let timeInterval: number | null = null
 
-
-    setInterval(() => {
-        currentTime.value = new Date()
-    }, 1000)
 
     const formatDate = computed(() => {
         return currentTime.value.toLocaleDateString('id-ID', {
@@ -63,37 +62,68 @@
         return !!todayAttendance.value?.check_in_time
     })
 
+    const recentAttendance = computed(() => {
+        if (!Array.isArray(attendanceHistory.value)) {
+            return [];
+        }
+        return attendanceHistory.value.slice(0,5);
+    })
+
     const fetchData = async () => {
-        loading.value = true;
-        try {
-            const [todayRes, historyRes] = await Promise.all([
-                attendanceService.getToday(),
-                attendanceService.getHistory()
-            ]);
-            todayAttendance.value = todayRes.data;
-            attendanceHistory.value = historyRes.data;
-        } catch (error) {
-            console.error('Error fetching attendance data:', error);
-        } finally {
+    loading.value = true;
+
+    try {
+        const [todayRes, historyRes] = await Promise.all([
+            attendanceService.getToday(),
+            attendanceService.getHistory()
+        ]);
+
+        if (!isMounted) return;
+
+        todayAttendance.value = todayRes.data;
+        attendanceHistory.value = historyRes.data;
+
+    } catch (error) {
+        console.error('Error fetching attendance data:', error);
+
+        if (!isMounted) return;
+
+        todayAttendance.value = null;
+        attendanceHistory.value = [];
+
+    } finally {
+        if (isMounted) {
             loading.value = false;
         }
     }
+};
     const goToAttendance = () => {
         router.push('/attendance')
     }
 
     onMounted(() => {
-        fetchData();
+        isMounted = true;
+        timeInterval = window.setInterval(() => {
+            if (isMounted) {
+                currentTime.value = new Date();
+            }
+        }, 1000)
+
+    setTimeout(() => {
+        if (isMounted) {
+            fetchData();
+        }
+    }, 100)
     })
 
-    // const goToProfile = () => {
-    //     router.push('/profile')
-    // }
-
-    // const goToReport = () => {
-    //     router.push('/report')
-    // }
-
+    onUnmounted(() => {
+        isMounted = false;
+        if (timeInterval !== null) {
+            clearInterval(timeInterval);
+            timeInterval = null;
+        }
+       
+    })
 </script>
 
 <template>
@@ -150,13 +180,16 @@
        
         <!-- Recent Attendance Section --> 
         <div class="p-4">
-            <h2 class="text-base-content font-semibold mb-3">Riwayat Kehadiran</h2>
-            <div v-if="loading" class="flex justify-center py-8">
+            <h2 class="text-base-content font-semibold mb-3">Kehadiran Terbaru</h2>
+            <div v-show="loading" class="flex justify-center py-8">
                 <span class="loading loading-spinner loading-lg text-primary"></span>
             </div>
-            <div v-else class="space-y-3">
+            <div v-show="!loading && recentAttendance.length === 0" class="flex justify-center py-8">
+                <p class="text-sm text-base-content/70">Tidak ada data kehadiran terbaru.</p>
+            </div>
+            <div v-show="!loading && recentAttendance.length > 0" class="space-y-3">
                 <AttendanceCard
-                    v-for="attendance in attendanceHistory.slice(0, 5)" 
+                    v-for="attendance in recentAttendance" 
                     :key="attendance.id" 
                     :attendance="attendance"
                     />
