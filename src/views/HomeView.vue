@@ -139,7 +139,7 @@
                 </button>
                 <button 
                 v-else
-                class="btn btn-error btn-lg w-full" 
+                class="btn btn-secondary btn-lg w-full" 
                 @click="goToAttendance">
                     Check Out
                 </button>

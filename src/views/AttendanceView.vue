@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {  Geolocation } from '@capacitor/geolocation';
 import { attendanceService, companyService, type Attendance, type Company } from '../services';
 import LivenessDetection from '../components/LivenessDetection.vue';
 import MapPreview from '../components/MapPreview.vue';
+import {MockLocation} from '@dewakoding/capacitor-mock-location';
+import FakeGpsAlert from '../components/FakeGpsAlert.vue';
 
 const router = useRouter()
 
@@ -16,17 +18,13 @@ const error = ref<string | null>(null)
 const success = ref<string | null>(null)
 
 const currentTime = ref(new Date())
+let timer: any = null
 const photoBase64 = ref<string | null>(null)
 const location = ref<{ latitude: number; longitude: number } | null>(null)
 const company = ref<Company | null>(null);
 
 const showLivenessDetection = ref(false);
-
-
-// Update time every second
-setInterval(() => {
-  currentTime.value = new Date()
-}, 1000)
+const showFakeGpsAlert = ref(false);
 
 const formattedTime = computed(() => {
   const hours = currentTime.value.getHours().toString().padStart(2, '0')
@@ -46,8 +44,47 @@ const formattedDate = computed(() => {
 
 const hasCheckedIn = computed(() => !!todayAttendance.value?.check_in_time)
 
+//calculate distance
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const R = 6371000; // Radius of the Earth in meters
+
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+
+  const a = 
+  Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+  Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *  Math.sin(dLon / 2) * Math.sin(dLon / 2)
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+  return R * c
+}
+
+// isWithinRadius
+const isWithinRadius = computed(() => {
+  if (!location.value || !company.value) return false
+
+  const companyLat = parseFloat(company.value.latitude);
+  const companyLon = parseFloat(company.value.longitude);
+  const radius = company.value.radius;
+
+  const distance = calculateDistance(
+    location.value.latitude,
+    location.value.longitude,
+    companyLat,
+    companyLon
+  )
+
+  return distance <= radius;
+})
+
+// canTakePhoto
+const canTakePhoto = computed(() => {
+  return isWithinRadius.value && location.value != null;
+})
+
 const canSubmit = computed(() => {
-  return photoBase64.value && location.value && !submitting.value
+  return !!photoBase64.value && !!location.value && !submitting.value
 })
 
 const fetchTodayAttendance = async () => {
@@ -71,7 +108,31 @@ const fetchCompany = async () => {
   }
 }
 
+const checkFakeGps = async (): Promise<boolean> => {
+  try {
+     const { isMock } = await MockLocation.checkMockLocation()
+
+  if (isMock) {
+    showFakeGpsAlert.value = true;
+    return true;
+  } 
+    return false
+
+  } catch (error) {
+    console.error('Error checking fake GPS: ', error);
+    return false;
+  }
+} 
+
+
 const getCurrentLocation = async () => {
+  const isFakeGps = await checkFakeGps();
+
+  if (isFakeGps) {
+    location.value = null;
+    return;
+  }
+
   try {
     const position = await Geolocation.getCurrentPosition({
       enableHighAccuracy: true,
@@ -113,20 +174,20 @@ const getCurrentLocation = async () => {
 //   input.click()
 // }
 
-const openLivenessDetection = () => {
+const openLivenessDetection = async () => {
+  if (!canTakePhoto.value) {
+    error.value = 'Anda tidak dapat melakukan presensi karena berada di luar radius perusahaan.';
+    return;
+  }
+
   showLivenessDetection.value = true;
 };
 
 const onLivenessSuccess = (photo : string) => {
   photoBase64.value = photo;
   showLivenessDetection.value = false;
-
-  if (!hasCheckedIn.value) {
-    handleCheckIn();
-  } else {
-    handleCheckOut();
-  }
 }
+
 
 const onLivenessCancel = () => {
   showLivenessDetection.value = false;
@@ -183,19 +244,61 @@ const handleCheckOut = async () => {
 
   } catch (err) {
     console.error('Failed to check out:', err)
-    error.value = 'Gagal melakukan check-out, silahkan dicoba lagi.'
+    error.value = 'Gagal melakukan check-out, silahkan dicoba lagi atau Anda sudah Check In'
   }
     setTimeout(() => {
       router.push('/home');
-    }, 2000);
+    }, 3000);
   }
 
 const goBack = () => router.push('/home')
+
+const handleFakeGpsAlertClose = async () => {
+  showFakeGpsAlert.value = false;
+ 
+  const isFakeGps = await checkFakeGps();
+  if (!isFakeGps) {
+     await getCurrentLocation();
+  }
+}
 
 onMounted (() => {
   fetchTodayAttendance()
   getCurrentLocation()
   fetchCompany()
+  timer = setInterval(() => {
+    currentTime.value = new Date();
+    console.log('Jam update...'); 
+  }, 1000);
+
+
+})
+
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer);
+    console.log("Interval jam berhasil dihentikan.");
+  }
+});
+
+watch(location, () => {
+  if (location.value && company.value) {
+    const companyLat = parseFloat(company.value.latitude);
+    const companyLon = parseFloat(company.value.longitude);
+    const radius = company.value.radius;
+    const distance = calculateDistance(
+      location.value.latitude,
+      location.value.longitude,
+      companyLat,
+      companyLon
+    );
+
+    if (distance > radius) {
+      error.value = 'Anda berada di luar radius absensi. Lokasi anda terletak di ' + location.value.latitude.toFixed(6) + ', ' + location.value.longitude.toFixed(6);
+    } else {
+      error.value = null;
+    }
+  }
 })
 </script>
 
@@ -281,7 +384,10 @@ onMounted (() => {
             </div>
 
             <!-- Take Photo Button -->
-            <button v-else class="btn btn-outline btn-primary w-full h-32" @click="openLivenessDetection">
+            <button
+              v-else 
+              class="btn btn-outline btn-primary w-full h-32" 
+              @click="openLivenessDetection" :class="{ 'btn btn-disabled opacity-50': !canTakePhoto }">
               <div class="flex flex-col items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -290,6 +396,13 @@ onMounted (() => {
                 <span>Ambil Foto</span>
               </div>
             </button>
+            <div class="alert alert-warning" v-if="location && !isWithinRadius && company">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>Anda berada di luar radius absensi. Lokasi anda terletak di {{ location.latitude.toFixed(6) }}, {{ location.longitude.toFixed(6) }}</span>
+            </div>
+            
           </div>
         </div>
 
@@ -314,7 +427,7 @@ onMounted (() => {
           v-if="!hasCheckedIn"
           class="btn btn-primary btn-lg w-full"
           :disabled="submitting"
-          @click="openLivenessDetection"
+          @click="handleCheckIn" :class="{ 'btn btn-disabled opacity-100': !canTakePhoto }"
         >
           <span v-if="submitting" class="loading loading-spinner"></span>
           {{ submitting ? 'Memproses...' : 'Check In' }}
@@ -324,20 +437,26 @@ onMounted (() => {
           v-else
           class="btn btn-secondary btn-lg w-full"
           :disabled="submitting"
-          @click="openLivenessDetection"
+          @click="handleCheckOut" :class="{ 'btn btn-disabled opacity-100': !canTakePhoto }"
         >
-          <span v-if="submitting" class="loading loading-spinner"></span>
+          <span v-if="submitting" class="loading loading-spinner" ></span>
           {{ submitting ? 'Memproses...' : 'Check Out' }}
         </button>
       </div>
     </div>
     
-<LivenessDetection
-  v-if="showLivenessDetection"
-  class="z-[100]" 
-  @success="onLivenessSuccess"
-  @cancel="onLivenessCancel"
-/>
+    <LivenessDetection
+      v-if="showLivenessDetection"
+      class="z-[100]" 
+      @success="onLivenessSuccess"
+      @cancel="onLivenessCancel"
+    />
+
+    <FakeGpsAlert
+      v-if="showFakeGpsAlert"
+      :show="showFakeGpsAlert"
+      @close="handleFakeGpsAlertClose"/>
+
 
   </div>
 </template>
