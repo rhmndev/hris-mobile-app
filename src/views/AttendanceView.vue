@@ -2,11 +2,12 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {  Geolocation } from '@capacitor/geolocation';
-import { attendanceService, companyService, type Attendance, type Company } from '../services';
+import { attendanceService, companyService, userService, type Attendance, type Company } from '../services';
 import LivenessDetection from '../components/LivenessDetection.vue';
 import MapPreview from '../components/MapPreview.vue';
 import {MockLocation} from '@dewakoding/capacitor-mock-location';
 import FakeGpsAlert from '../components/FakeGpsAlert.vue';
+import {compareFaceImages} from '../utils/faceRecognation';
 
 const router = useRouter()
 
@@ -21,6 +22,10 @@ const currentTime = ref(new Date())
 const photoBase64 = ref<string | null>(null)
 const location = ref<{ latitude: number; longitude: number } | null>(null)
 const company = ref<Company | null>(null);
+const profilePhotoSource = ref<string | null>(null);
+const faceVerificationStatus = ref<'idle' | 'checking' | 'verified' | 'failed'>('idle');
+const faceVerificationError = ref<string | null>(null);
+const profilePhotoMissingMessage = 'Foto profile tidak ditemukan, silahkan upload foto profile terlebih dahulu untuk melakukan presensi.';
 let timer: any = null
 
 
@@ -85,7 +90,7 @@ const canTakePhoto = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  return !!photoBase64.value && !!location.value && !submitting.value
+  return !!photoBase64.value && !!location.value && !submitting.value && !error.value;
 })
 
 const fetchTodayAttendance = async () => {
@@ -106,6 +111,56 @@ const fetchCompany = async () => {
     company.value = res.data;
   } catch (error) {
     console.error('Failed to fetch company data:', error);
+  }
+}
+
+const fetchProfilePhoto = async () => {
+  try {
+    const res = await userService.getProfilePhoto();
+    profilePhotoSource.value = res.data.profile_photo_base64 || res.data.profile_photo_url || null;
+  } catch (error) {
+    console.error('Failed to fetch profile photo:', error);
+  }
+}
+
+const resetFaceVerification = () => {
+  faceVerificationStatus.value = 'idle';
+  faceVerificationError.value = null;
+  error.value = null;
+  success.value = null;
+};
+
+const verifyFaceMatch = async (selfieBase64: string) => {
+  console.log('>>>', 'Starting face verification...')
+  resetFaceVerification();
+  faceVerificationStatus.value = 'checking';
+  if (!profilePhotoSource.value) {
+    faceVerificationStatus.value = 'failed';
+    faceVerificationError.value = profilePhotoMissingMessage;
+    return;
+  }
+  try {
+    const result = await compareFaceImages(profilePhotoSource.value, selfieBase64);
+    if (!result.match) {
+      console.log('>>>', 'Face verification failed. Face does not match.');
+      faceVerificationStatus.value = 'failed';
+      faceVerificationError.value = "Verifikasi wajah gagal. Wajah tidak sesuai dengan foto profil Anda.";
+      error.value = faceVerificationError.value;
+      return
+    } 
+
+    faceVerificationStatus.value = 'verified';
+    if (error.value === profilePhotoMissingMessage) {
+      error.value = null;
+    }
+
+    success.value = 'Verifikasi wajah berhasil. Wajah sesuai dengan foto profil Anda.';
+    console.log('>>>', 'Face verification successful: Face matched.');
+  } catch (errorMessage) {
+    console.error('Error during face verification:', errorMessage);
+    faceVerificationStatus.value = 'failed';
+    faceVerificationError.value = "Terjadi kesalahan saat memverifikasi wajah. Silakan coba lagi.";
+    error.value = faceVerificationError.value;
   }
 }
 
@@ -162,9 +217,10 @@ const openLivenessDetection = async () => {
   showLivenessDetection.value = true;
 };
 
-const onLivenessSuccess = (photo : string) => {
+const onLivenessSuccess = async (photo : string) => {
   photoBase64.value = photo;
   showLivenessDetection.value = false;
+  await verifyFaceMatch(photo);
 }
 
 
@@ -179,6 +235,7 @@ const handleCheckIn = async () => {
   submitting.value = true
   error.value = null
   success.value = null
+
 
   try {
     const res = await attendanceService.checkIn({
@@ -245,6 +302,7 @@ onMounted (() => {
   fetchTodayAttendance()
   getCurrentLocation()
   fetchCompany()
+  fetchProfilePhoto()
   timer = setInterval(() => {
     currentTime.value = new Date();
   }, 1000);
@@ -404,8 +462,8 @@ watch(location, () => {
         <button
           v-if="!hasCheckedIn"
           class="btn btn-primary btn-lg w-full"
-          :disabled="submitting"
-          @click="handleCheckIn" :class="{ 'btn btn-disabled opacity-100': !canTakePhoto }"
+          :disabled="!canSubmit"
+          @click="handleCheckIn" 
         >
           <span v-if="submitting" class="loading loading-spinner"></span>
           {{ submitting ? 'Memproses...' : 'Check In' }}
@@ -414,8 +472,8 @@ watch(location, () => {
         <button
           v-else
           class="btn btn-secondary btn-lg w-full"
-          :disabled="submitting"
-          @click="handleCheckOut" :class="{ 'btn btn-disabled opacity-100': !canTakePhoto }"
+          :disabled="!canSubmit"
+          @click="handleCheckOut" 
         >
           <span v-if="submitting" class="loading loading-spinner" ></span>
           {{ submitting ? 'Memproses...' : 'Check Out' }}

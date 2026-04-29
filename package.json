@@ -18,9 +18,10 @@
     "@mediapipe/face_mesh": "^0.4.1633559619",
     "@tailwindcss/postcss": "^4.2.2",
     "@vue-leaflet/vue-leaflet": "^0.10.1",
+    "face-api.js": "^0.22.2",
     "leaflet": "^1.9.4",
     "pinia": "^3.0.4",
-    "vue": "^3.5.32",
+    "vue": "^3.5.33",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {

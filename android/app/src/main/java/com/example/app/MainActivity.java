@@ -1,4 +1,4 @@
-package com.hris.ess;
+package com.example.app;
 
 import com.getcapacitor.BridgeActivity;
 

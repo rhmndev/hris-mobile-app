@@ -6,8 +6,13 @@
 import { useAuthStore } from '../stores/auth';
 import router from '../router';
 
-const API_BASE_URL = 'https://process-stench-galvanize.ngrok-free.dev/api'
-// const API_BASE_URL = 'http://192.168.110.55:8000/api'
+export const API_BASE_URL = 'https://process-stench-galvanize.ngrok-free.dev/api' // Untuk Ngrok Testing
+// export const API_BASE_URL = 'http://192.168.110.55:8000/api' // Untuk Lokal Development
+// export const API_BASE_URL = 'https://hris.rahmandev.my.id/api' // Untuk ke Server
+
+
+export const API_ORIGIN = new URL(API_BASE_URL).origin
+
 
 
 class HttpClient {
@@ -47,7 +52,7 @@ class HttpClient {
           authStore.logout();
           router.push('/login')
         }
-      throw new Error('SESSION EXPIRED!. Please login again with your account.')
+      throw new Error('Akun tidak valid atau sesi telah berakhir. Silakan login kembali.');
     }
 
     let data: any

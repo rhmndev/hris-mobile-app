@@ -231,8 +231,31 @@ function cancel() {
   emit('cancel')
 }
 
+// function capturePhoto(): string {
+//   if (!videoRef.value || !canvasRef.value) return ''
+//   const video = videoRef.value
+//   const canvas = canvasRef.value
+//   const ctx = canvas.getContext('2d')
+//   if (!ctx) return ''
+
+//   const w = video.videoWidth || 640
+//   const h = video.videoHeight || 480
+//   canvas.width = w
+//   canvas.height = h
+
+//   ctx.save()
+//   ctx.translate(w, 0)
+//   ctx.scale(-1, 1)
+//   ctx.drawImage(video, 0, 0, w, h)
+//   ctx.restore()
+
+//   const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+//   return dataUrl.split(',')[1] || ''
+// }
+
 function capturePhoto(): string {
   if (!videoRef.value || !canvasRef.value) return ''
+
   const video = videoRef.value
   const canvas = canvasRef.value
   const ctx = canvas.getContext('2d')
@@ -240,16 +263,30 @@ function capturePhoto(): string {
 
   const w = video.videoWidth || 640
   const h = video.videoHeight || 480
+
   canvas.width = w
   canvas.height = h
+
+  const ellipseWidth = w * 0.5
+  const ellipseHeight = ellipseWidth * (80 / 64)
+
+  const centerX = w / 2
+  const centerY = h / 2
 
   ctx.save()
   ctx.translate(w, 0)
   ctx.scale(-1, 1)
+
+  ctx.beginPath()
+  ctx.ellipse(centerX, centerY, ellipseWidth / 2, ellipseHeight / 2, 0, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.clip()
+
   ctx.drawImage(video, 0, 0, w, h)
+
   ctx.restore()
 
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+  const dataUrl = canvas.toDataURL('image/png')
   return dataUrl.split(',')[1] || ''
 }
 
