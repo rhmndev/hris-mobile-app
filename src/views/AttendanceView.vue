@@ -90,7 +90,7 @@ const canTakePhoto = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  return !!photoBase64.value && !!location.value && !submitting.value && !error.value;
+  return !!photoBase64.value && !!location.value && !submitting.value && !error.value && faceVerificationStatus.value === 'verified';
 })
 
 const fetchTodayAttendance = async () => {

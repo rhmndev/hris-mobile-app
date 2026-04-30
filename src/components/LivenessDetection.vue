@@ -264,29 +264,48 @@ function capturePhoto(): string {
   const w = video.videoWidth || 640
   const h = video.videoHeight || 480
 
-  canvas.width = w
-  canvas.height = h
+  // Buat canvas square untuk output circular
+  const size = 480 // Square size untuk circular output
+  canvas.width = size
+  canvas.height = size
 
-  const ellipseWidth = w * 0.5
-  const ellipseHeight = ellipseWidth * (80 / 64)
-
-  const centerX = w / 2
-  const centerY = h / 2
+  // Hitung center
+  const centerX = size / 2
+  const centerY = size / 2
+  const radius = size / 2 - 10 // Radius circle dengan sedikit padding
 
   ctx.save()
-  ctx.translate(w, 0)
-  ctx.scale(-1, 1)
-
+  
+  // Create circular path
   ctx.beginPath()
-  ctx.ellipse(centerX, centerY, ellipseWidth / 2, ellipseHeight / 2, 0, 0, Math.PI * 2)
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
   ctx.closePath()
   ctx.clip()
 
-  ctx.drawImage(video, 0, 0, w, h)
-
+  // Mirror dan draw
+  ctx.translate(size, 0)
+  ctx.scale(-1, 1)
+  
+  // Draw video ke tengah canvas
+  const videoAspect = w / h
+  const canvasAspect = size / size
+  
+  let drawW = size
+  let drawH = size / videoAspect
+  let drawX = 0
+  let drawY = (size - drawH) / 2
+  
+  if (drawH < size) {
+    drawH = size
+    drawW = size * videoAspect
+    drawX = (size - drawW) / 2
+    drawY = 0
+  }
+  
+  ctx.drawImage(video, drawX, drawY, drawW, drawH)
   ctx.restore()
 
-  const dataUrl = canvas.toDataURL('image/png')
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
   return dataUrl.split(',')[1] || ''
 }
 
@@ -504,16 +523,16 @@ onUnmounted(() => {
       ></video>
       <canvas ref="canvasRef" class="hidden"></canvas>
 
-      <!-- Overlay hitam dengan hole elips di tengah (sesuai dengan border w-64 h-80) -->
+      <!-- Overlay hitam dengan hole circle di tengah -->
       <div 
         class="absolute inset-0 pointer-events-none"
-        style="background: radial-gradient(ellipse 128px 160px at 50% 50%, transparent 0%, transparent 98%, rgba(0,0,0,0.98) 99%, rgba(0,0,0,0.98) 100%);"
+        style="background: radial-gradient(circle 224px at 50% 50%, transparent 0%, transparent 98%, rgba(0,0,0,0.98) 99%, rgba(0,0,0,0.98) 100%);"
       ></div>
 
       <!-- Border overlay -->
       <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div
-          class="w-64 h-80 border-4 rounded-full pointer-events-none z-10"
+          class="w-80 h-80 border-4 rounded-full pointer-events-none z-10"
           :class="{
             'border-white/50': step === 'instruction' || step === 'align',
             'border-yellow-400 animate-pulse': step === 'blink' || step === 'left' || step === 'right',

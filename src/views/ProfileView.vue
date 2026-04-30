@@ -2,13 +2,14 @@
     import { useRouter } from 'vue-router'
     import BottomNavigation from '../components/BottomNavigation.vue'
     import { useAuthStore } from '../stores/auth'
-    import { authService } from '../services';
+    import { authService, userService } from '../services';
     import { onMounted, ref } from 'vue';
 
     const router = useRouter();
     const authStore = useAuthStore();
     const loading = ref(false);
     const isLoggingOut = ref(false);
+    const profilePhotoSource = ref<string | null>(null);
 
     const fetchUserData = async () => {
         loading.value = true;
@@ -26,8 +27,18 @@
         }
     }
 
+    const fetchProfilePhoto = async () => {
+        try {
+            const res = await userService.getProfilePhoto();
+            profilePhotoSource.value = res.data.profile_photo_base64 || res.data.profile_photo_url || null;
+        } catch (error) {
+            console.error('Failed to fetch profile photo:', error);
+        }
+    }
+
     onMounted(() => {
         fetchUserData();
+        fetchProfilePhoto();
     });
 
     const handleLogout = async () => {
@@ -64,7 +75,9 @@
             <div class="flex flex-col items-center">
                 <div class="avatar placeholder mb-4">
                     <div class="bg-blue-400 text-white rounded-full w-24">
-                        <span class="text-6xl font-bold flex items-center justify-center h-full">{{ authStore.user?.name.charAt(0) }}</span>
+                        <!-- <span class="text-6xl font-bold flex items-center justify-center h-full">{{ authStore.user?.name.charAt(0) }}</span> -->
+                        <img v-if="profilePhotoSource" :src="profilePhotoSource" alt="Profile Photo" class="w-full h-full object-cover rounded-full">
+                        <span v-else class="text-6xl font-bold flex items-center justify-center h-full">{{ authStore.user?.name.charAt(0) }}</span>
                     </div>
                 </div>
                 <h2 class="text-lg font-semibold">{{ authStore.user?.name }}</h2>
