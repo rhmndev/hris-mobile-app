@@ -34,7 +34,7 @@
 </script>
 
 <template>
-    <div class="fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-300 shadow-lg">
+    <div class="fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-300 shadow-lg z-50">
         <div class="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
             <button 
                 v-for="item in navItems"

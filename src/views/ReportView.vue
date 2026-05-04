@@ -4,16 +4,17 @@
     import BottomNavigation from '../components/BottomNavigation.vue'
     import AttendanceCard from '../components/AttendanceCard.vue'
     import { attendanceService, type Attendance } from '../services'
+    import AttendanceCalendar from '../components/AttendanceCalendar.vue'
 
     const router = useRouter();
 
 
     const attendanceHistory = ref<Attendance[]>([])
     const loading = ref(true)
-
     const currentDate = new Date()
     const selectedMonth = ref(currentDate.getMonth() + 1)
     const selectedYear = ref(currentDate.getFullYear())
+    const viewMode = ref<'list' | 'calendar'>('list')
 
     const months = [
         { value: 1, label: 'Januari' },
@@ -119,12 +120,21 @@
             </div>
          </div>
 
-        <!-- Ateendance List -->
+        <!-- Attendance List -->
          <div class="p-4">
-            <h2 class="font-semibold mb-3 text-base-content">
-                Attendance History
-                <span class="text-base-content/60 font-normal">({{ attendanceHistory.length }} Records)</span>
-            </h2>
+            <div class="flex items-center justify-between gap-3 mb-2">
+                <div>
+                    <h2 class="font-semifold text-base-content">Attendance History</h2>
+                    <div class="text-xs text-base-content/60">{{attendanceHistory.length}} records</div>
+                </div>
+
+                <!-- calender and button swich  -->
+                <div class="join">
+                    <button class="btn btn-sm join-item" :class="viewMode === 'list' ? 'btn-primary' : 'btn-ghost'" @click="viewMode = 'list'">List</button>
+                    <button class="btn btn-sm join-item" :class="viewMode === 'calendar' ? 'btn-primary' : 'btn-ghost'" @click="viewMode = 'calendar'">Calendar</button>
+                </div>
+            </div>
+            
             <div v-if="loading" class="flex justify-center py-8">
                 <span class="loading loading-spinner loading-lg text-primary"></span>
             </div>
@@ -133,14 +143,24 @@
                 No attendance records found for the selected month and year.
             </div>
 
-             <div v-else class="space-y-3">
+             <div v-else-if="viewMode === 'list'" class="space-y-3">
                 <AttendanceCard
                 v-for="attendance in attendanceHistory"
                 :key="attendance.id"
                 :attendance="attendance"
                 />
             </div>
+            <div v-else class="card bg-base-100 shadow">
+                <AttendanceCalendar 
+                :attendances="attendanceHistory"
+                :month="selectedMonth"
+                :year="selectedYear"
+                />
+            </div>
+            <div v-if="viewMode === 'calendar'" class="calendar-safe-space"></div>
         </div>
+
+
         <!-- BottomNavigation -->
         <BottomNavigation />
     </div>
@@ -148,5 +168,8 @@
 <style>
  .pb-safe-bottom {
     padding-bottom: calc(4rem + env(safe-area-inset-bottom, 16px));
+ }
+ .calendar-safe-space {
+    height: calc(4rem + env(safe-area-inset-bottom, 16px));
  }
 </style>
