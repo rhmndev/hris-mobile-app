@@ -16,8 +16,13 @@ class AttendanceService {
    * Get today's attendance for current user
    */
   async getToday(): Promise<TodayAttendanceResponse> {
+    //getcheck in and out photo 
+
     return httpClient.get<TodayAttendanceResponse>('/attendance/today')
+
   }
+
+  
 
   /**
    * Get attendance history with pagination

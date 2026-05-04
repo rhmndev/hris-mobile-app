@@ -8,8 +8,8 @@ import router from '../router';
 
 // export const API_BASE_URL = 'https://process-stench-galvanize.ngrok-free.dev/api' // Untuk Ngrok Testing (limit access)
 // export const API_BASE_URL = 'http://192.168.110.55:8000/api' // Untuk Lokal Development
-export const API_BASE_URL = 'https://hris.rahmandev.my.id/api' // home server
-// export const API_BASE_URL = 'https://hris-be.rahmandev.my.id/api'
+// export const API_BASE_URL = 'https://hris.rahmandev.my.id/api' // home server
+export const API_BASE_URL = 'https://hris-be.rahmandev.my.id/api'
 
 export const API_ORIGIN = new URL(API_BASE_URL).origin
 

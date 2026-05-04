@@ -288,7 +288,7 @@ function capturePhoto(): string {
   
   // Draw video ke tengah canvas
   const videoAspect = w / h
-  const canvasAspect = size / size
+  // const canvasAspect = size / size
   
   let drawW = size
   let drawH = size / videoAspect

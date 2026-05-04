@@ -61,7 +61,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen bg-base-200 pb-24">
+    <div class="min-h-screen bg-base-200 pb-24 pb-safe-bottom">
         <!-- Header -->
          <div class="bg-primary text-primary-content pt-12 px-4 pb-8">
             <div class="flex items-center gap-4 mb-6">
@@ -138,3 +138,8 @@
     </div>
 
 </template>
+<style>
+ .pb-safe-bottom {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 16px));
+ }
+</style>

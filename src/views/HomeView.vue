@@ -150,7 +150,7 @@
 </script>
 
 <template>
-    <div class="min-h-screen bg-base-200 pb-24">
+    <div class="min-h-screen bg-base-200 pb-24 pb-safe-bottom" >
         <!-- Header Section -->
         <div class="bg-primary text-primary-content pt-12 pb-6 px-4 rounded-b-3xl">
             <div class="flex items-center justify-between mb-4">
@@ -240,3 +240,9 @@
     </div>
 
 </template>
+
+<style>
+ .pb-safe-bottom {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 16px));
+ }
+</style>

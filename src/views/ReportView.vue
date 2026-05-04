@@ -140,11 +140,13 @@
                 :attendance="attendance"
                 />
             </div>
-         </div>
-
-
+        </div>
         <!-- BottomNavigation -->
-         <BottomNavigation />
+        <BottomNavigation />
     </div>
-
 </template>
+<style>
+ .pb-safe-bottom {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 16px));
+ }
+</style>

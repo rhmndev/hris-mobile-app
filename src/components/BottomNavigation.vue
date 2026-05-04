@@ -56,6 +56,12 @@
             </button>
             
         </div>
-        <div class="h-safe-bottom bg-bas-100"></div>
+        <div class="safe-area-spacer h-safe-bottom bg-bas-100"></div>
     </div>
 </template>
+
+<style scoped>
+    .safe-area-spacer {
+        height: env(safe-area-inset-bottom, 16px);
+    }
+</style>
