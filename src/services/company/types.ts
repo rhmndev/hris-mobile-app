@@ -17,6 +17,9 @@ export interface Branch {
     radius: number
     work_start_time: string
     work_end_time: string
+    require_liveness: boolean
+    require_geolocation: boolean
+    require_face_recognation: boolean
 }
 
 export interface CompanyResponse {

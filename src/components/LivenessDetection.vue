@@ -6,6 +6,11 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 type FaceMesh = any;
 type Camera = any;
 
+const props = withDefaults(defineProps<{
+  requireLiveness?: boolean
+}>(), {
+  requireLiveness: true,
+})
 
 const emit = defineEmits<{
   (e: 'success', photoBase64: string): void

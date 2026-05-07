@@ -42,12 +42,16 @@ class AttendanceService {
    */
   async checkIn(data: CheckInOutRequest): Promise<CheckInOutResponse> {
     const formData = new FormData()
-    formData.append('latitude', data.latitude.toString())
-    formData.append('longitude', data.longitude.toString())
-
-    // Convert base64 to Blob for proper multipart upload
-    const photoBlob = httpClient.base64ToBlob(data.photo)
-    formData.append('photo', photoBlob, 'selfie.jpg')
+    if (typeof data.latitude === 'number') {
+      formData.append('latitude', data.latitude.toString())
+    } 
+    if (typeof data.longitude === 'number') {
+      formData.append('longitude', data.longitude.toString())
+    }
+    if (data.photo) {
+      const photoBlob = httpClient.base64ToBlob(data.photo)
+      formData.append('photo', photoBlob, 'selfie.jpg')
+    }
 
     return httpClient.postFormData<CheckInOutResponse>('/attendance/check-in', formData)
     
@@ -58,12 +62,16 @@ class AttendanceService {
    */
 async checkOut(data: CheckInOutRequest): Promise<CheckInOutResponse> {
     const formData = new FormData()
-    formData.append('latitude', data.latitude.toString())
-    formData.append('longitude', data.longitude.toString())
-
-    // Convert base64 to Blob for proper multipart upload
-    const photoBlob = httpClient.base64ToBlob(data.photo)
-    formData.append('photo', photoBlob, 'selfie.jpg')
+    if (typeof data.latitude === 'number') {
+      formData.append('latitude', data.latitude.toString())
+    } 
+    if (typeof data.longitude === 'number') {
+      formData.append('longitude', data.longitude.toString())
+    }
+    if (data.photo) {
+      const photoBlob = httpClient.base64ToBlob(data.photo)
+      formData.append('photo', photoBlob, 'selfie.jpg')
+    }
 
     return httpClient.postFormData<CheckInOutResponse>('/attendance/check-out', formData)
   }
