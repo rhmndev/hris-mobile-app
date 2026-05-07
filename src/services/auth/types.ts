@@ -5,8 +5,21 @@ export interface User {
     phone: string | null;
     employee_id: string | null;
     role: string;
+    branch: Branch | null;
     email_verified_at: string | null;
     created_at: string;
+}
+
+export interface Branch {
+    id: number;
+    company_id: number;
+    name: string;
+    address: string | null;
+    latitude: string;
+    longitude: string;
+    radius: number;
+    work_start_time: string;
+    work_end_time: string;
 }
 
 export interface LoginRequest {

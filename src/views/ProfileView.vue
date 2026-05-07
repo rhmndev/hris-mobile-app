@@ -89,18 +89,6 @@
         <div class="p-4 -mt-4">
             <div class="card bg-base-100 shadow">
                 <div class="card-body p-0">
-                <!-- Email -->
-                <div class="flex items-center gap-4 p-4 border-b border-base-200">
-                    <div class="bg-primary/10 p-3 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    </div>
-                    <div class="flex-1">
-                    <p class="text-xs text-base-content/60">Email</p>
-                    <p class="font-medium">{{ authStore.user?.email }}</p>
-                    </div>
-                </div>
 
                 <!-- Employee ID -->
                 <div class="flex items-center gap-4 p-4">
@@ -110,10 +98,36 @@
                     </svg>
                     </div>
                     <div class="flex-1">
-                    <p class="text-xs text-base-content/60">Employee ID</p>
+                    <p class="text-base text-base-content/60">Employee ID</p>
                     <p class="font-medium">{{ authStore.user?.employee_id }}</p>
                     </div>
                 </div>
+                </div>
+
+                 <!-- Branch -->
+                <div class="flex items-center gap-4 p-4 border-b border-base-200">
+                    <div class="bg-primary/10 p-3 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                    </svg>
+                    </div>
+                    <div class="flex-1">
+                    <p class="text-base text-base-content/60">Branch</p>
+                    <p class="font-medium">{{ authStore.user?.branch?.name }}</p>
+                    </div>
+                </div>
+
+                <!-- Work Start Time -->
+                <div class="flex items-center gap-4 p-4 border-b border-base-200">
+                    <div class="bg-primary/10 p-3 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                    </svg>
+                    </div>
+                    <div class="flex-1">
+                    <p class="text-base text-base-content/60">Time</p>
+                    <p class="font-medium">{{ authStore.user?.branch?.work_start_time }} - {{ authStore.user?.branch?.work_end_time }}</p>
+                    </div>
                 </div>
             </div>
 

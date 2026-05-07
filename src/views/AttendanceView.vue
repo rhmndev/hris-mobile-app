@@ -8,6 +8,7 @@ import MapPreview from '../components/MapPreview.vue';
 import {MockLocation} from '@dewakoding/capacitor-mock-location';
 import FakeGpsAlert from '../components/FakeGpsAlert.vue';
 import {compareFaceImages} from '../utils/faceRecognation';
+// import { latLng } from 'leaflet';
 
 const router = useRouter()
 
@@ -22,6 +23,24 @@ const currentTime = ref(new Date())
 const photoBase64 = ref<string | null>(null)
 const location = ref<{ latitude: number; longitude: number } | null>(null)
 const company = ref<Company | null>(null);
+const companyLocation = computed(() => {
+  const branch = company.value?.branch;
+  const latitude = branch?.latitude ?? null;
+  const longitude = branch?.longitude ?? null;
+  const radius = branch?.radius ?? null;
+
+  if (latitude === null || longitude === null || radius === null) {
+    return null;
+  }
+
+  return {
+    latitude: parseFloat(latitude),
+    longitude: parseFloat(longitude),
+    radius: radius,
+  }
+
+})
+
 const profilePhotoSource = ref<string | null>(null);
 const faceVerificationStatus = ref<'idle' | 'checking' | 'verified' | 'failed'>('idle');
 const faceVerificationError = ref<string | null>(null);
@@ -70,15 +89,14 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 const isWithinRadius = computed(() => {
   if (!location.value || !company.value) return false
 
-  const companyLat = parseFloat(company.value.latitude);
-  const companyLon = parseFloat(company.value.longitude);
-  const radius = company.value.radius;
+  const {latitude, longitude, radius} = companyLocation.value!;
+
 
   const distance = calculateDistance(
-    location.value.latitude,
+    location.value.latitude, 
     location.value.longitude,
-    companyLat,
-    companyLon
+    latitude,
+    longitude
   )
 
   return distance <= radius;
@@ -319,14 +337,12 @@ onUnmounted(() => {
 
 watch(location, () => {
   if (location.value && company.value) {
-    const companyLat = parseFloat(company.value.latitude);
-    const companyLon = parseFloat(company.value.longitude);
-    const radius = company.value.radius;
+    const { latitude, longitude, radius } = companyLocation.value!
     const distance = calculateDistance(
       location.value.latitude,
       location.value.longitude,
-      companyLat,
-      companyLon
+      latitude,
+      longitude
     );
 
     if (distance > radius) {
@@ -389,9 +405,9 @@ watch(location, () => {
             <div class="mt-3">
               <MapPreview 
               v-if="location"
-              :company-latitude="company ? parseFloat(company.latitude) : null"
-              :company-longitude="company ? parseFloat(company.longitude) : null"
-              :company-radius="company ? company.radius : 200"
+              :company-latitude="companyLocation ? companyLocation.latitude : null"
+              :company-longitude="companyLocation ? companyLocation.longitude : null"
+              :company-radius="companyLocation ? companyLocation.radius : 300"
               :latitude="location.latitude"
               :longitude="location.longitude"
               :height="'250px'"/>
