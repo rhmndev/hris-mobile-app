@@ -23,6 +23,22 @@ const currentTime = ref(new Date())
 const photoBase64 = ref<string | null>(null)
 const location = ref<{ latitude: number; longitude: number } | null>(null)
 const company = ref<Company | null>(null);
+
+const branchValidation = computed(() => {
+  const branch = company.value?.branch;
+
+  return {
+    requireLiveness: branch?.require_liveness ?? true,
+    requireGeolocation: branch?.require_geolocation ?? true,
+    requireFaceRecognation: branch?.require_face_recognation ?? true
+  }
+})
+
+const requireSelfie = computed(() => {
+  return branchValidation.value.requireLiveness || branchValidation.value.requireFaceRecognation
+})
+
+
 const companyLocation = computed(() => {
   const branch = company.value?.branch;
   const latitude = branch?.latitude ?? null;
@@ -104,11 +120,23 @@ const isWithinRadius = computed(() => {
 
 // canTakePhoto
 const canTakePhoto = computed(() => {
+  if (!requireSelfie.value) return false
+  if (!branchValidation.value.requireGeolocation) return true
   return isWithinRadius.value && location.value != null;
 })
 
 const canSubmit = computed(() => {
-  return !!photoBase64.value && !!location.value && !submitting.value && !error.value && faceVerificationStatus.value === 'verified';
+  const locationRequirementMet = !branchValidation.value.requireGeolocation || location.value != null
+  const photoRequirementMet = !requireSelfie.value || photoBase64.value != null
+  const faceRequirementMet = !branchValidation.value.requireFaceRecognation || faceVerificationStatus.value === 'verified'
+
+  return (
+    locationRequirementMet &&
+    photoRequirementMet &&
+    !submitting.value &&
+    faceRequirementMet
+)
+
 })
 
 const fetchTodayAttendance = async () => {
@@ -227,8 +255,20 @@ const getCurrentLocation = async () => {
 }
 
 const openLivenessDetection = async () => {
-  if (!canTakePhoto.value) {
+  error.value = null;
+
+  if (!requireSelfie.value) {
+    return;
+  }
+
+  if (branchValidation.value.requireGeolocation && !canTakePhoto.value) {
     error.value = 'Anda tidak dapat melakukan presensi karena berada di luar radius perusahaan.';
+    return;
+  }
+
+  if (branchValidation.value.requireFaceRecognation && !profilePhotoSource.value) {
+    faceVerificationStatus.value = 'failed';
+    faceVerificationError.value = profilePhotoMissingMessage;
     return;
   }
 
@@ -238,7 +278,12 @@ const openLivenessDetection = async () => {
 const onLivenessSuccess = async (photo : string) => {
   photoBase64.value = photo;
   showLivenessDetection.value = false;
-  await verifyFaceMatch(photo);
+
+  if (branchValidation.value.requireFaceRecognation) {
+    await verifyFaceMatch(photo);
+    return
+  }
+  resetFaceVerification();
 }
 
 
@@ -257,9 +302,9 @@ const handleCheckIn = async () => {
 
   try {
     const res = await attendanceService.checkIn({
-      photo: photoBase64.value!,
-      latitude: location.value!.latitude,
-      longitude: location.value!.longitude,
+      latitude: branchValidation.value.requireGeolocation ? location.value?.latitude : undefined,
+      longitude: branchValidation.value.requireGeolocation ? location.value?.longitude : undefined,
+      photo: requireSelfie.value ? (photoBase64.value ?? undefined) : undefined,
     })
 
     success.value = res.message || 'Check-in berhasil!'
@@ -287,9 +332,9 @@ const handleCheckOut = async () => {
 
   try {
     const res = await attendanceService.checkOut({
-      photo: photoBase64.value!,
-      latitude: location.value!.latitude,
-      longitude: location.value!.longitude,
+      latitude: branchValidation.value.requireGeolocation ? location.value?.latitude : undefined,
+      longitude: branchValidation.value.requireGeolocation ? location.value?.longitude : undefined,
+      photo: requireSelfie.value ? (photoBase64.value ?? undefined) : undefined,
     })
 
     success.value = res.message || 'Check-out berhasil!'
@@ -384,7 +429,7 @@ watch(location, () => {
       <!-- Check In/Out Form -->
       <div v-else class="space-y-4">
         <!-- Location Status -->
-        <div class="card bg-base-100 shadow">
+        <div v-if="branchValidation.requireGeolocation" class="card bg-base-100 shadow">
           <div class="card-body p-4">
             <div class="flex items-center gap-3">
               <div class="p-3 rounded-full" :class="location ? 'bg-success/10' : 'bg-warning/10'">
@@ -417,7 +462,7 @@ watch(location, () => {
         </div>
 
         <!-- Photo Section -->
-        <div class="card bg-base-100 shadow">
+        <div v-if="requireSelfie" class="card bg-base-100 shadow">
           <div class="card-body p-4">
             <p class="font-medium mb-3">Foto Selfie</p>
 
@@ -500,6 +545,7 @@ watch(location, () => {
     <LivenessDetection
       v-if="showLivenessDetection"
       class="z-[100]" 
+      :require-liveness="branchValidation.requireLiveness"
       @success="onLivenessSuccess"
       @cancel="onLivenessCancel"
     />

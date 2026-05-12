@@ -40,7 +40,7 @@ export interface AttendanceHistoryResponse {
 export interface CheckInOutRequest {
   latitude?: number
   longitude?: number
-  photo: string // base64 encoded
+  photo?: string // base64 encoded
 }
 
 export interface CheckInOutResponse {

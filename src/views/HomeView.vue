@@ -4,7 +4,7 @@
     import AttendanceCard from '../components/AttendanceCard.vue';
     import BottomNavigation from '../components/BottomNavigation.vue';
     import { useAuthStore } from '../stores/auth';
-    import { attendanceService, type Attendance } from '../services';
+    import { attendanceService, type Attendance, type Company } from '../services';
     import { API_ORIGIN } from '../services/https';
     
     
@@ -16,8 +16,23 @@
     const attendanceHistory = ref<Attendance []>([]);
     const loading = ref(true);
     const currentTime = ref(new Date());
+    const company = ref<Company | null>(null);
+
     let isMounted = false
     let timeInterval: number | null = null
+
+    const branchValidation = computed(() => {
+            const branch = company.value?.branch;
+
+        return {
+            requireLiveness: branch?.require_liveness ?? true,
+            requireGeolocation: branch?.require_geolocation ?? true,
+            requireFaceRecognation: branch?.require_face_recognation ?? true
+        }
+        })
+    const requireSelfie = computed(() => {
+  return branchValidation.value.requireLiveness || branchValidation.value.requireFaceRecognation
+})
 
     const buildImageUrl = (path: string | null): string => {
         if (!path) return '';
@@ -175,7 +190,7 @@
                 <!-- Check In dan Check Out Time  -->
                 <div class="grid grid-cols-2 gap-6 mb-4">
                     <!-- Check In Column -->
-                    <div class="text-center">
+                    <div v-if="requireSelfie" class="text-center">
                         <p class="text-sm text-base-content/60 mb-2">Check In</p>
                         <p class="text-3xl font-bold text-primary mb-3">{{ checkInTime }}</p>
                         <div class="flex items-center justify-center">

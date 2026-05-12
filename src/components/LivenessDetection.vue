@@ -20,7 +20,7 @@ const emit = defineEmits<{
 const videoRef = ref<HTMLVideoElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-type Step = 'instruction' | 'align' | 'blink' | 'left' | 'right' | 'finalize' | 'success' | 'failed'
+type Step = 'instruction' | 'manual' | 'align' | 'blink' | 'left' | 'right' | 'finalize' | 'success' | 'failed'
 const step = ref<Step>('instruction')
 
 const instruction = ref('Siapkan wajah Anda di dalam frame')
@@ -494,8 +494,14 @@ function onResults(results: Results) {
 
 onMounted(async () => {
   resetAll(true)
-  await initFaceMesh()
   await startCamera()
+  if (!props.requireLiveness) {
+    step.value = 'manual'
+    instruction.value = 'Posisikan wajah di dalam frame lalu ambil foto.'
+    return
+  }
+
+  await initFaceMesh()
 })
 
 onUnmounted(() => {
@@ -576,6 +582,9 @@ onUnmounted(() => {
       <div class="flex justify-center gap-4">
         <button v-if="step === 'instruction'" class="btn btn-primary btn-lg" @click="startVerification">
           Mulai Verifikasi
+        </button>
+        <button v-else-if="step === 'manual'" class="btn btn-primary btn-lg" @click="onSuccess">
+          Ambil Foto
         </button>
 
         <div v-else-if="step === 'align' || step === 'blink' || step === 'left' || step === 'right' || step === 'finalize'"
