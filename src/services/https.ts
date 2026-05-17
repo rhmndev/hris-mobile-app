@@ -105,6 +105,17 @@ class HttpClient {
    return this.handleResponse<T>(response);
   }
 
+  async delete<T>(endpoint: string): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`
+
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    })
+
+    return this.handleResponse<T>(response);
+  }
+
   /**
    * Convert base64 string to Blob for file uploads
    */

@@ -32,6 +32,17 @@ const router = createRouter({
                 path: '/profile',
                 name: 'profile',
                 component: () => import('../views/ProfileView.vue'),
+            },
+            {
+                path: '/leave',
+                name: 'leave',
+                component: () => import('../views/LeaveView.vue')
+            },
+
+            {
+                path: '/leave/create',
+                name: 'leave-create',
+                component: () => import('../views/LeaveCreateView.vue')
             }
             
     ],
