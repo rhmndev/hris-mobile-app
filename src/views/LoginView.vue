@@ -1,8 +1,10 @@
 <script setup lang="ts">
     import { ref } from 'vue';
     import { useRouter } from 'vue-router';
+    import { useAuthStore } from '../stores/auth';
 
     const router = useRouter();
+    const authStore = useAuthStore();
 
     const email = ref('');
     const password = ref('');
@@ -18,12 +20,16 @@
 
             return;
         }
+        isLoading.value = true;
+        const result = await authStore.login(email.value, password.value);
 
-        isLoading.value = true
-        setTimeout(() => {
-            isLoading.value = false
-            router.push('/home')
-        }, 1000)
+        if (result.success) {
+            isLoading.value = false;
+            router.push('/home');
+        } else {
+            isLoading.value = false;
+            localError.value = result.message || 'Login gagal. Silahkan coba lagi.';
+        }
     }
 
 
@@ -38,7 +44,7 @@
 
                 <img src="../assets/images/logo_primary.png" alt="Login" class="w-full mb-6" />
 
-                <form>
+                <form @submit.prevent="handleLogin" class="w-full">
                     <!-- Email -->
                     <fieldset class="fieldset">
                         <legend class="fieldset-legend">Email</legend>
@@ -73,7 +79,7 @@
                     </fieldset>
 
                     <!-- Error Message -->
-                    <div v-if="localError" class="alert alert-error mt-4">
+                    <div v-if="localError || authStore.error" class="alert alert-error mt-4">
                         <div>
                             <span>{{ localError }}</span>
                         </div>
@@ -81,9 +87,9 @@
 
                     <!-- Login Button -->
                     <div class="mt-6">
-                        <button type="submit" class="btn btn-primary w-full" :disabled="isLoading">
-                            <span v-if="isLoading" class="loading loading-spinner loading-sm"></span>
-                            {{ isLoading ? 'Memproses Login...' : 'Login' }}
+                        <button type="submit" class="btn btn-primary w-full" :disabled="authStore.isLoading">
+                            <span v-if="authStore.isLoading" class="loading loading-spinner loading-sm"></span>
+                            {{ isLoading ? 'Memproses....' : 'Login' }}
                         </button>
                     </div>
 
