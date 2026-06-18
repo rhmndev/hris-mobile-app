@@ -1,11 +1,16 @@
 import jsPDF from 'jspdf';
 import { formatCurrency, formatMonth, formatDate } from './dateFormatter';
 
+export interface GeneratedPDF {
+  pdfArrayBuffer: ArrayBuffer;
+  filename: string;
+}
+
 export function generatePayslipPDF(
   payslip: any,
   employee: any,
   designation: string
-): void {
+): GeneratedPDF {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -194,7 +199,8 @@ export function generatePayslipPDF(
     { align: 'center' }
   );
 
-  // Save PDF
+  // Return PDF as ArrayBuffer + filename (let caller handle save/share)
   const filename = `Slip_Gaji_${employee.name || 'Karyawan'}_${payslip.month}_${payslip.year}.pdf`;
-  doc.save(filename);
+  const pdfArrayBuffer = doc.output('arraybuffer');
+  return { pdfArrayBuffer, filename };
 }

@@ -95,18 +95,15 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 pb-4">
+        <div class="pb-4">
           <button
             @click="$emit('download', payslip)"
-            class="bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+            class="btn bg-green-600 text-white hover:bg-green-700 border-none w-full"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
             Download PDF
-          </button>
-          <button
-            @click="shareNativePDF"
-            class="bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-          >
-            Bagikan Slip
           </button>
         </div>
       </div>
@@ -116,8 +113,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { formatCurrency, formatMonth, formatDate } from '@/utils/dateFormatter';
-import jsPDF from 'jspdf'; // Kita import untuk meng-handle ekspor biner PDF langsung di modal ini
+import { formatCurrency, formatMonth } from '@/utils/dateFormatter';
 
 const props = defineProps({
   payslip: {
@@ -160,43 +156,5 @@ function getStatusLabel(status: string): string {
     rejected: 'Ditolak'
   };
   return labels[status] || status;
-}
-
-// ==================== FITUR NATIVE SHARING MOBILE ====================
-async function shareNativePDF() {
-  const periode = formatMonth(props.payslip.month, props.payslip.year);
-  const filename = `Slip_Gaji_${periode.replace(' ', '_')}.pdf`;
-
-  try {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('SLIP GAJI KARYAWAN', 15, 15);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Periode: ${periode}`, 15, 23);
-    doc.text(`Gaji Bersih: Rp ${formatCurrency(props.payslip.net_salary)}`, 15, 31);
-    doc.text(`Status: ${getStatusLabel(props.payslip.status)}`, 15, 39);
-    doc.text('------------------------------------------------', 15, 45);
-    doc.text('Detail lengkap dokumen terlampir pada file PDF ini.', 15, 52);
-
-    const pdfOutput = doc.output('arraybuffer');
-    const blob = new Blob([pdfOutput], { type: 'application/pdf' });
-    
-    const file = new File([blob], filename, { type: 'application/pdf' });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        files: [file],
-        title: `Slip Gaji ${periode}`,
-        text: `Berikut lampiran Slip Gaji online untuk periode ${periode}.`,
-      });
-    } else {
-      const subject = encodeURIComponent(`Slip Gaji Periode ${periode}`);
-      const body = encodeURIComponent(`Gaji Bersih Anda periode ${periode} adalah Rp ${formatCurrency(props.payslip.net_salary)}`);
-      window.location.href = `mailto:?subject=${subject}&body=${body}`;
-    }
-  } catch (error) {
-    console.error('Gagal memproses fitur Berbagi Native:', error);
-  }
 }
 </script>

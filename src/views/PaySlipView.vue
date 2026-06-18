@@ -13,11 +13,23 @@
           <p class="text-blue-100 text-sm mt-1">{{ currentMonthYear }}</p>
         </div>
       </div>
-      <div class="text-right">
+      <div class="flex items-center gap-2">
+        <button
+          @click="fetchPayslips"
+          :disabled="loading"
+          class="p-2 rounded-full hover:bg-white/20 transition"
+          :class="{ 'animate-spin': loading }"
+          title="Refresh Data"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+        <div class="text-right">
           <h1 class="font-bold text-lg">{{ authStore.user?.name || "User"}}</h1>
-                <p class="text-sm opacity-80 mb-1">{{ authStore.user?.email }}</p>
-
+          <p class="text-sm opacity-80 mb-1">{{ authStore.user?.email }}</p>
         </div>
+      </div>
 
 
       </div>

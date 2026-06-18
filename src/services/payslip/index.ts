@@ -57,11 +57,30 @@ export class PayslipService {
         `/employee/payslips/${payslip.id}/download`
       );
       
-      // Use pdfGenerator to create PDF on client side
       const { generatePayslipPDF } = await import('../../utils/pdfGenerator');
-      generatePayslipPDF(response.data, response.employee, response.designation);
+      const { savePdfToDevice } = await import('../../utils/nativePdfActions');
+
+      const generatedPdf = generatePayslipPDF(response.data, response.employee, response.designation);
+      await savePdfToDevice(generatedPdf);
     } catch (error) {
       console.error('Error downloading payslip PDF:', error);
+      throw error;
+    }
+  }
+
+  async sharePayslipPDF(payslip: Payslip): Promise<void> {
+    try {
+      const response: any = await httpClient.get(
+        `/employee/payslips/${payslip.id}/download`
+      );
+
+      const { generatePayslipPDF } = await import('../../utils/pdfGenerator');
+      const { sharePdf } = await import('../../utils/nativePdfActions');
+
+      const generatedPdf = generatePayslipPDF(response.data, response.employee, response.designation);
+      await sharePdf(generatedPdf);
+    } catch (error) {
+      console.error('Error sharing payslip PDF:', error);
       throw error;
     }
   }
