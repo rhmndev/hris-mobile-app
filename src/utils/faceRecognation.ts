@@ -47,6 +47,59 @@ async function getDescriptor(source: string): Promise<Float32Array | null> {
   return detection.descriptor
 }
 
+export interface FaceValidationResult {
+  valid: boolean
+  message: string
+  faceCount: number
+  confidence: number
+}
+
+/**
+ * Validates a photo for use as a profile face recognition reference.
+ * Checks:
+ *  - Exactly one face is detected
+ *  - Detection confidence is above threshold (0.5)
+ */
+export async function validateFacePhoto(
+  source: string,
+  minConfidence: number = 0.5
+): Promise<FaceValidationResult> {
+  await ensureFaceModelsLoaded()
+
+  const img = await loadImage(source)
+
+  // Detect ALL faces (not just single) to count them
+  const detections = await faceapi.detectAllFaces(img).withFaceLandmarks()
+
+  const faceCount = detections.length
+
+  if (faceCount === 0) {
+    return { valid: false, message: 'Tidak ada wajah terdeteksi. Pastikan wajah Anda terlihat jelas.', faceCount, confidence: 0 }
+  }
+
+  if (faceCount > 1) {
+    return { valid: false, message: 'Terdeteksi lebih dari satu wajah. Pastikan hanya ada satu orang dalam foto.', faceCount, confidence: 0 }
+  }
+
+  // Single face – check confidence score
+  const score = detections[0].detection.score
+  if (score < minConfidence) {
+    return {
+      valid: false,
+      message: `Kualitas deteksi wajah terlalu rendah (${Math.round(score * 100)}%). Pastikan pencahayaan cukup dan wajah menghadap kamera.`,
+      faceCount,
+      confidence: score,
+    }
+  }
+
+  return {
+    valid: true,
+    message: 'Foto valid untuk digunakan sebagai referensi wajah.',
+    faceCount,
+    confidence: score,
+  }
+}
+
 export async function compareFaceImages(
   capturedBase64: string,
   profileSource: string,

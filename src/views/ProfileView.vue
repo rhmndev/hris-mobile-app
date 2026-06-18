@@ -5,6 +5,8 @@
     import { authService, userService } from '../services';
     import { onMounted, ref, reactive, computed } from 'vue';
     import type { UpdateProfileRequest } from '../services/auth/types';
+    import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+    import { validateFacePhoto, type FaceValidationResult } from '../utils/faceRecognation';
 
     const router = useRouter();
     const authStore = useAuthStore();
@@ -15,6 +17,16 @@
     const isSaving = ref(false);
     const saveSuccess = ref(false);
     const saveError = ref<string | null>(null);
+
+    // Photo upload state
+    const showPhotoOptions = ref(false);
+    const showPhotoPreview = ref(false);
+    const pendingPhotoBase64 = ref<string | null>(null);
+    const isValidatingFace = ref(false);
+    const isUploadingPhoto = ref(false);
+    const faceValidation = ref<FaceValidationResult | null>(null);
+    const photoError = ref<string | null>(null);
+    const photoSuccess = ref<string | null>(null);
 
     const editForm = reactive<UpdateProfileRequest>({
         name: '',
@@ -140,6 +152,113 @@
     const goBack = () => {
         router.push('/home')
     }
+
+    // ── Photo Upload Functions ────────────────────────────────────────────────
+
+    const openPhotoOptions = () => {
+        photoError.value = null;
+        photoSuccess.value = null;
+        showPhotoOptions.value = true;
+    }
+
+    const closePhotoOptions = () => {
+        showPhotoOptions.value = false;
+    }
+
+    const takePhoto = async () => {
+        showPhotoOptions.value = false;
+        try {
+            const image = await Camera.getPhoto({
+                quality: 85,
+                allowEditing: false,
+                resultType: CameraResultType.Base64,
+                source: CameraSource.Camera,
+                width: 640,
+                height: 640,
+                correctOrientation: true,
+            });
+            if (image.base64String) {
+                const base64 = `data:image/${image.format || 'jpeg'};base64,${image.base64String}`;
+                await handlePhotoSelected(base64);
+            }
+        } catch (error: any) {
+            // User cancelled – ignore
+            if (error?.message?.toLowerCase?.().includes('cancel')) return;
+            photoError.value = 'Gagal mengambil foto. Pastikan kamera tersedia.';
+        }
+    }
+
+    const pickFromGallery = async () => {
+        showPhotoOptions.value = false;
+        try {
+            const image = await Camera.getPhoto({
+                quality: 85,
+                allowEditing: false,
+                resultType: CameraResultType.Base64,
+                source: CameraSource.Photos,
+                width: 640,
+                height: 640,
+                correctOrientation: true,
+            });
+            if (image.base64String) {
+                const base64 = `data:image/${image.format || 'jpeg'};base64,${image.base64String}`;
+                await handlePhotoSelected(base64);
+            }
+        } catch (error: any) {
+            if (error?.message?.toLowerCase?.().includes('cancel')) return;
+            photoError.value = 'Gagal memilih foto dari galeri.';
+        }
+    }
+
+    const handlePhotoSelected = async (base64: string) => {
+        pendingPhotoBase64.value = base64;
+        faceValidation.value = null;
+        photoError.value = null;
+        isValidatingFace.value = true;
+        showPhotoPreview.value = true;
+
+        try {
+            const result = await validateFacePhoto(base64);
+            faceValidation.value = result;
+        } catch (error) {
+            faceValidation.value = {
+                valid: false,
+                message: error instanceof Error ? error.message : 'Gagal memvalidasi wajah.',
+                faceCount: 0,
+                confidence: 0,
+            };
+        } finally {
+            isValidatingFace.value = false;
+        }
+    }
+
+    const cancelPhotoPreview = () => {
+        showPhotoPreview.value = false;
+        pendingPhotoBase64.value = null;
+        faceValidation.value = null;
+    }
+
+    const confirmUploadPhoto = async () => {
+        if (!pendingPhotoBase64.value || !faceValidation.value?.valid) return;
+
+        isUploadingPhoto.value = true;
+        photoError.value = null;
+        try {
+            const res = await userService.uploadProfilePhoto(pendingPhotoBase64.value);
+            authStore.updateUser(res.data);
+            // Refresh the displayed photo
+            await fetchProfilePhoto();
+            showPhotoPreview.value = false;
+            pendingPhotoBase64.value = null;
+            faceValidation.value = null;
+            photoSuccess.value = 'Foto profil berhasil diperbarui!';
+            setTimeout(() => { photoSuccess.value = null; }, 4000);
+        } catch (error) {
+            photoError.value = error instanceof Error ? error.message : 'Gagal mengunggah foto profil.';
+        } finally {
+            isUploadingPhoto.value = false;
+        }
+    }
 </script>
 
 <template>
@@ -155,11 +274,24 @@
                 <h1 class="text-xl font-semibold">Profile</h1>
             </div>
             <div class="flex flex-col items-center">
-                <div class="avatar placeholder mb-4">
-                    <div class="bg-blue-400 text-white rounded-full w-24">
-                        <img v-if="profilePhotoSource" :src="profilePhotoSource" alt="Profile Photo" class="w-full h-full object-cover rounded-full">
-                        <span v-else class="text-6xl font-bold flex items-center justify-center h-full">{{ user?.name?.charAt(0) }}</span>
+                <div class="relative mb-4">
+                    <div class="avatar placeholder">
+                        <div class="bg-blue-400 text-white rounded-full w-24">
+                            <img v-if="profilePhotoSource" :src="profilePhotoSource" alt="Profile Photo" class="w-full h-full object-cover rounded-full">
+                            <span v-else class="text-6xl font-bold flex items-center justify-center h-full">{{ user?.name?.charAt(0) }}</span>
+                        </div>
                     </div>
+                    <!-- Camera icon overlay -->
+                    <button
+                        class="absolute bottom-0 right-0 bg-primary text-primary-content rounded-full w-8 h-8 flex items-center justify-center shadow-lg border-2 border-white active:scale-95 transition-transform"
+                        @click="openPhotoOptions"
+                        title="Ubah Foto Profil"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
                 </div>
                 <h2 class="text-lg font-semibold">{{ user?.name }}</h2>
                 <p class="text-sm opacity-80 mb-1">{{ user?.email }}</p>
@@ -171,6 +303,18 @@
 
         <!-- Content -->
         <div class="p-4 -mt-4 space-y-4">
+
+            <!-- Photo Success Message -->
+            <div v-if="photoSuccess" class="alert alert-success">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>{{ photoSuccess }}</span>
+            </div>
+
+            <!-- Photo Error Message -->
+            <div v-if="photoError" class="alert alert-error">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>{{ photoError }}</span>
+            </div>
 
             <!-- Success Message -->
             <div v-if="saveSuccess" class="alert alert-success">
@@ -375,6 +519,121 @@
             <p class="text-center text-xs text-base-content/40 mt-4">Version App v1.0.0</p>
         </div>
 
+        <!-- Photo Options Modal -->
+        <Teleport to="body">
+            <div v-if="showPhotoOptions" class="fixed inset-0 z-50 flex items-end justify-center bg-black/50" @click.self="closePhotoOptions">
+                <div class="bg-base-100 w-full rounded-t-3xl p-6 animate-slide-up">
+                    <div class="w-12 h-1 bg-base-300 rounded-full mx-auto mb-5"></div>
+                    <h3 class="text-lg font-semibold mb-1 text-center">Ubah Foto Profil</h3>
+                    <p class="text-sm text-base-content/60 text-center mb-6">
+                        Foto ini akan digunakan sebagai referensi pengenalan wajah untuk absensi.
+                    </p>
+                    <div class="space-y-3">
+                        <button
+                            class="btn btn-primary w-full justify-start gap-3"
+                            @click="takePhoto"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Ambil Foto
+                        </button>
+                        <button
+                            class="btn btn-outline w-full justify-start gap-3"
+                            @click="pickFromGallery"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Pilih dari Galeri
+                        </button>
+                        <button
+                            class="btn btn-ghost w-full text-base-content/60"
+                            @click="closePhotoOptions"
+                        >
+                            Batal
+                        </button>
+                    </div>
+                    <!-- Tips -->
+                    <div class="mt-5 p-3 bg-info/10 rounded-xl">
+                        <p class="text-xs text-info font-semibold mb-1">Tips Upload Foto</p>
+                        <ul class="text-xs text-base-content/70 space-y-0.5 list-disc list-inside">
+                            <li>Pastikan hanya ada satu wajah dalam foto</li>
+                            <li>Pencahayaan cukup, wajah menghadap kamera</li>
+                            <li>Hindari foto blur atau terlalu gelap</li>
+                            <li>Kelayakan foto akan divalidasi otomatis dengan AI</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Photo Preview & Validation Modal -->
+        <Teleport to="body">
+            <div v-if="showPhotoPreview" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                <div class="bg-base-100 w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+                    <!-- Photo Preview -->
+                    <div class="bg-base-200 flex items-center justify-center" style="min-height: 280px;">
+                        <img
+                            v-if="pendingPhotoBase64"
+                            :src="pendingPhotoBase64"
+                            alt="Preview"
+                            class="w-full h-72 object-cover"
+                        />
+                    </div>
+
+                    <!-- Validation Result -->
+                    <div class="p-5 space-y-4">
+                        <h3 class="font-semibold text-center">Validasi Foto</h3>
+
+                        <!-- Loading state -->
+                        <div v-if="isValidatingFace" class="flex flex-col items-center gap-2 py-2">
+                            <span class="loading loading-spinner loading-md text-primary"></span>
+                            <p class="text-sm text-base-content/60">Memvalidasi wajah dengan AI...</p>
+                        </div>
+
+                        <!-- Validation Result -->
+                        <template v-else-if="faceValidation">
+                            <!-- Valid -->
+                            <div v-if="faceValidation.valid" class="alert alert-success py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <div>
+                                    <p class="text-sm font-medium">Wajah Terdeteksi</p>
+                                    <p class="text-xs opacity-80">Kepercayaan: {{ Math.round(faceValidation.confidence * 100) }}%</p>
+                                </div>
+                            </div>
+
+                            <!-- Invalid -->
+                            <div v-else class="alert alert-warning py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                <p class="text-sm">{{ faceValidation.message }}</p>
+                            </div>
+                        </template>
+
+                        <!-- Actions -->
+                        <div class="flex gap-2">
+                            <button
+                                class="btn btn-primary flex-1"
+                                @click="confirmUploadPhoto"
+                                :disabled="!faceValidation?.valid || isUploadingPhoto"
+                            >
+                                <span v-if="isUploadingPhoto" class="loading loading-spinner loading-xs"></span>
+                                {{ isUploadingPhoto ? 'Uploading...' : 'Upload Foto' }}
+                            </button>
+                            <button
+                                class="btn btn-ghost flex-1"
+                                @click="cancelPhotoPreview"
+                                :disabled="isUploadingPhoto"
+                            >
+                                Batal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
         <!-- Bottom Navigation -->
          <BottomNavigation />
     </div>
@@ -383,5 +642,13 @@
 <style>
  .pb-safe-bottom {
     padding-bottom: calc(4rem + env(safe-area-inset-bottom, 16px));
+ }
+
+ @keyframes slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+ }
+ .animate-slide-up {
+    animation: slide-up 0.25s ease-out;
  }
 </style>
