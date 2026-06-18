@@ -18,6 +18,10 @@
     const loading = ref(true);
     const currentTime = ref(new Date());
     const company = ref<Company | null>(null);
+    
+    const user = computed(() => authStore.user);
+    const empDes = computed(() => user.value?.employee_designation);
+    
 
     let isMounted = false
     let timeInterval: number | null = null
@@ -209,7 +213,10 @@
                 <div class="flex items-center gap-3">
                     <div>
                         <p class="font-semibold text-lg">{{ authStore.user?.name || "User"}}</p>
-                        <p class="font-semibold text-sm">{{ authStore.user?.role || "Role"}}</p>
+                        <!-- <p class="font-semibold text-sm">{{ authStore.user?. || "Role"}}</p> -->
+                        <span v-if="empDes?.designation" class="font-semibold text-sm">
+                    {{ empDes.designation.name }}
+                </span>
                     </div>
                 </div>
                 <div class="text-right">

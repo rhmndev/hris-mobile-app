@@ -1,8 +1,4 @@
-/**
- * Services Entry Point
- * Export all services from one place
- */
-
+// Re-export types
 export { httpClient } from './https'
 export { authService } from './auth'
 export { attendanceService } from './attendance'
@@ -11,7 +7,7 @@ export { userService } from './user'
 export { leaveService } from './leave'
 
 // Re-export types
-export type { User, LoginRequest, LoginResponse } from './auth'
+export type { User, LoginRequest, LoginResponse, UpdateProfileRequest, UpdateProfileResponse, EmployeeDesignation, Designation, Shift } from './auth'
 export type {
   Attendance,
   CheckInOutRequest,

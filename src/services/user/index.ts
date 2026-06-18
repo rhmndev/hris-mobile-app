@@ -1,5 +1,6 @@
 import { httpClient, API_ORIGIN } from '../https'
-import type {UserProfilePhotoResponse} from './types'
+import type { UserProfilePhotoResponse } from './types'
+import type { UpdateProfileRequest, UpdateProfileResponse } from '../auth/types'
 
 class UserService {
     async getProfilePhoto(): Promise<UserProfilePhotoResponse> {
@@ -9,6 +10,10 @@ class UserService {
             response.data.profile_photo_url = new URL(photoUrl, API_ORIGIN).toString();
         }
         return response;
+    }
+
+    async updateProfile(data: UpdateProfileRequest): Promise<UpdateProfileResponse> {
+        return httpClient.put<UpdateProfileResponse>('/user/profile', data)
     }
 }
 
