@@ -4,7 +4,7 @@
     import AttendanceCard from '../components/AttendanceCard.vue';
     import BottomNavigation from '../components/BottomNavigation.vue';
     import { useAuthStore } from '../stores/auth';
-    import { attendanceService, type Attendance, type Company } from '../services';
+    import { attendanceService, leaveService, type Attendance, type Company } from '../services';
     import { API_ORIGIN } from '../services/https';
     
     
@@ -14,9 +14,14 @@
 
     const todayAttendance = ref<Attendance | null>(null);
     const attendanceHistory = ref<Attendance []>([]);
+    const leaveData = ref<any>(null);
     const loading = ref(true);
     const currentTime = ref(new Date());
     const company = ref<Company | null>(null);
+    
+    const user = computed(() => authStore.user);
+    const empDes = computed(() => user.value?.employee_designation);
+    
 
     let isMounted = false
     let timeInterval: number | null = null
@@ -102,19 +107,51 @@
         return attendanceHistory.value.slice(0,5);
     })
 
+    const leaveQuotaPercentage = computed(() => {
+        if (!leaveData.value) return 0;
+        const quota = leaveData.value.total_quota || 12;
+        const used = leaveData.value.used_quota || 0;
+        const remaining = Math.max(0, quota - used);
+        return Math.round((remaining / quota) * 100);
+    })
+
+    const remainingLeavesDays = computed(() => {
+        if (!leaveData.value) return 0;
+        const quota = leaveData.value.total_quota || 12;
+        const used = leaveData.value.used_quota || 0;
+        return Math.max(0, quota - used);
+    })
+
     const fetchData = async () => {
     loading.value = true;
 
     try {
-        const [todayRes, historyRes] = await Promise.all([
+        const [todayRes, historyRes, leaveRes] = await Promise.all([
             attendanceService.getToday(),
-            attendanceService.getHistory()
+            attendanceService.getHistory(),
+            leaveService.getLeaveRequests().catch(() => ({ data: null }))
         ]);
 
         if (!isMounted) return;
 
         todayAttendance.value = todayRes.data;
         attendanceHistory.value = historyRes.data;
+        
+        if (leaveRes.data) {
+            const approved = leaveRes.data.filter((leave: any) => leave.status === 'approved');
+            const usedDays = approved.reduce((total: number, leave: any) => {
+                const start = new Date(leave.start_date);
+                const end = new Date(leave.end_date);
+                const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                return total + days;
+            }, 0);
+            
+            leaveData.value = {
+                total_quota: 12,
+                used_quota: usedDays,
+                approved_count: approved.length
+            };
+        }
 
     } catch (error) {
         console.error('Error fetching attendance data:', error);
@@ -132,6 +169,10 @@
 };
     const goToAttendance = () => {
         router.push('/attendance')
+    }
+
+    const goToLeave = () => {
+        router.push('/leave')
     }
 
     onMounted(() => {
@@ -172,7 +213,10 @@
                 <div class="flex items-center gap-3">
                     <div>
                         <p class="font-semibold text-lg">{{ authStore.user?.name || "User"}}</p>
-                        <p class="font-semibold text-sm">{{ authStore.user?.role || "Role"}}</p>
+                        <!-- <p class="font-semibold text-sm">{{ authStore.user?. || "Role"}}</p> -->
+                        <span v-if="empDes?.designation" class="font-semibold text-sm">
+                    {{ empDes.designation.name }}
+                </span>
                     </div>
                 </div>
                 <div class="text-right">
@@ -227,6 +271,39 @@
                 {{ hasCheckedOut ? 'Sudah Check Out' : 'Check Out' }}
                 </button>
 
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <!-- Quota Leave Request Card -->
+            <div class="card bg-base-100 shadow-md rounded-2xl border border-base-300">
+                <div class="card-body p-5 flex flex-col items-center justify-center">
+                    <div class="relative w-28 h-28 mb-3">
+                        <svg class="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" stroke-width="4"></circle>
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#3b82f6" stroke-width="4" stroke-dasharray="282.7" :stroke-dashoffset="`${282.7 * (1 - leaveQuotaPercentage / 100)}`" stroke-linecap="round" class="transition-all duration-500"></circle>
+                        </svg>
+                        <div class="absolute inset-7 flex items-center justify-center flex-col">
+                            <p class="text-xl font-bold text-base-content">{{ remainingLeavesDays }}</p>
+                            <p class="text-xs text-base-content/60">hari</p>
+                        </div>
+                    </div>
+                    <p class="text-sm font-semibold text-base-content text-center">Sisa Cuti</p>
+                    <p class="text-xs text-base-content/70 text-center mt-1">{{ leaveQuotaPercentage }}% dari 12 hari</p>
+                </div>
+            </div>
+
+            <!-- Leave -->
+            <div class="card bg-base-100 shadow-md rounded-2xl border border-base-300 cursor-pointer hover:shadow-lg transition-shadow" @click="goToLeave">
+                <div class="card-body p-5 flex flex-col items-center justify-center">
+                    <div class="w-14 h-14 bg-base-200 rounded-full flex items-center justify-center mb-3">
+                        <svg class="w-7 h-7 text-base-content" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-sm font-semibold text-base-content text-center">Kelola Cuti</p>
+                    <p class="text-xs text-base-content/70 text-center mt-1">Lihat status</p>
+                </div>
             </div>
         </div>
     </div>

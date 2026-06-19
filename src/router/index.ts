@@ -38,11 +38,15 @@ const router = createRouter({
                 name: 'leave',
                 component: () => import('../views/LeaveView.vue')
             },
-
             {
                 path: '/leave/create',
                 name: 'leave-create',
                 component: () => import('../views/LeaveCreateView.vue')
+            },
+            {
+                path: '/payslip',
+                name: 'payslip',
+                component: () => import('../views/PaySlipView.vue')
             }
             
     ],

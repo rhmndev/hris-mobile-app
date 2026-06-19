@@ -6,3 +6,9 @@ export interface UserProfilePhotoResponse {
     }
     message: string
 }
+
+export interface UploadProfilePhotoResponse {
+    success: boolean
+    message: string
+    data: import('../auth/types').User
+}

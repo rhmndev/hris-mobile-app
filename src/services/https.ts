@@ -1,20 +1,13 @@
-/**
- * Base HTTP Client
- * Handles all HTTP requests with authentication and error handling
- */
-
 import { useAuthStore } from '../stores/auth';
 import router from '../router';
 
-// export const API_BASE_URL = 'https://process-stench-galvanize.ngrok-free.dev/api' // Untuk Ngrok Testing (limit access)
-// export const API_BASE_URL = 'http://192.168.110.55:8000/api' // Untuk Lokal Development
-export const API_BASE_URL = 'https://hris.rahmandev.my.id/api' // home server
-// export const API_BASE_URL = 'https://hris-be.rahmandev.my.id/api'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 export const API_ORIGIN = new URL(API_BASE_URL).origin
 
 class HttpClient {
   private baseURL: string
+    defaults: any;
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL
@@ -43,7 +36,6 @@ class HttpClient {
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
-    // console.log('>>> HTTP Response:', response)
     if (response.status === 401) {
       const authStore = useAuthStore();
      if (router.currentRoute.value.path !== '/login') {
@@ -116,9 +108,19 @@ class HttpClient {
     return this.handleResponse<T>(response);
   }
 
-  /**
-   * Convert base64 string to Blob for file uploads
-   */
+  async put<T>(endpoint: string, body?: object): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+    })
+
+    return this.handleResponse<T>(response);
+  }
+
+  
   base64ToBlob(base64: string, mimeType: string = 'image/jpeg'): Blob {
     const byteCharacters = atob(base64)
     const byteNumbers = new Array(byteCharacters.length)
