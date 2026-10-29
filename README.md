@@ -1,8 +1,6 @@
 #  Dokumentasi HRIS ESS — Panduan Menjalankan Project di Lokal
 
 <img width="413" height="848" alt="Screenshot 2026-07-18 174153" src="https://github.com/user-attachments/assets/1e61f934-8408-4e55-a10a-f0357410e2d9" />
-<img width="426" height="866" alt="Screenshot 2026-07-20 103849" src="https://github.com/user-attachments/assets/6b6d0df5-94c8-4a50-b501-90d294ee5143" />
-
 
 
 Panduan singkat cara menjalankan project **HRIS ESS** dari cloning sampai berjalan di komputer lokal, mencakup backend (`laravel-hris-be`) dan mobile app (`hris-mobile-app`).
