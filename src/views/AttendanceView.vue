@@ -57,6 +57,53 @@ const companyLocation = computed(() => {
 
 })
 
+// Time window restrictions from branch config
+const timeWindow = computed(() => {
+  const branch = company.value?.branch;
+  return {
+    minCheckIn: branch?.min_check_in_time ?? null,
+    maxCheckIn: branch?.max_check_in_time ?? null,
+    minCheckOut: branch?.min_check_out_time ?? null,
+    maxCheckOut: branch?.max_check_out_time ?? null,
+  }
+})
+
+// Helper: compare "HH:MM:SS" string against current time (returns -1 if current < time, 0 if equal, 1 if current > time)
+const compareTimeToNow = (timeStr: string): number => {
+  const now = currentTime.value;
+  const [h, m, s] = timeStr.split(':').map(Number);
+  const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const targetSeconds = (h ?? 0) * 3600 + (m ?? 0) * 60 + (s ?? 0);
+  if (nowSeconds < targetSeconds) return -1;
+  if (nowSeconds > targetSeconds) return 1;
+  return 0;
+}
+
+// Returns a message string if current time violates the time window, null otherwise
+const timeWindowViolation = computed((): string | null => {
+  const action = hasCheckedIn.value ? 'checkout' : 'checkin';
+
+  if (action === 'checkin') {
+    if (timeWindow.value.minCheckIn && compareTimeToNow(timeWindow.value.minCheckIn) < 0) {
+      return `Check-in belum dapat dilakukan. Waktu check-in paling awal adalah ${timeWindow.value.minCheckIn.slice(0, 5)}.`;
+    }
+    if (timeWindow.value.maxCheckIn && compareTimeToNow(timeWindow.value.maxCheckIn) > 0) {
+      return `Check-in tidak dapat dilakukan. Batas waktu check-in adalah ${timeWindow.value.maxCheckIn.slice(0, 5)}.`;
+    }
+  }
+
+  if (action === 'checkout') {
+    if (timeWindow.value.minCheckOut && compareTimeToNow(timeWindow.value.minCheckOut) < 0) {
+      return `Check-out belum dapat dilakukan. Waktu check-out paling awal adalah ${timeWindow.value.minCheckOut.slice(0, 5)}.`;
+    }
+    if (timeWindow.value.maxCheckOut && compareTimeToNow(timeWindow.value.maxCheckOut) > 0) {
+      return `Check-out tidak dapat dilakukan. Batas waktu check-out adalah ${timeWindow.value.maxCheckOut.slice(0, 5)}.`;
+    }
+  }
+
+  return null;
+})
+
 const profilePhotoSource = ref<string | null>(null);
 const faceVerificationStatus = ref<'idle' | 'checking' | 'verified' | 'failed'>('idle');
 const faceVerificationError = ref<string | null>(null);
@@ -129,12 +176,14 @@ const canSubmit = computed(() => {
   const locationRequirementMet = !branchValidation.value.requireGeolocation || location.value != null
   const photoRequirementMet = !requireSelfie.value || photoBase64.value != null
   const faceRequirementMet = !branchValidation.value.requireFaceRecognation || faceVerificationStatus.value === 'verified'
+  const timeWindowMet = !timeWindowViolation.value
 
   return (
     locationRequirementMet &&
     photoRequirementMet &&
     !submitting.value &&
-    faceRequirementMet
+    faceRequirementMet &&
+    timeWindowMet
 )
 
 })
@@ -416,6 +465,26 @@ watch(location, () => {
       <div class="text-center">
         <p class="text-5xl font-bold tabular-nums">{{ formattedTime }}</p>
         <p class="text-sm opacity-80 mt-2">{{ formattedDate }}</p>
+
+        <!-- Time Window Info -->
+        <div v-if="timeWindow.minCheckIn || timeWindow.maxCheckIn || timeWindow.minCheckOut || timeWindow.maxCheckOut" class="mt-3 inline-flex flex-wrap justify-center gap-2">
+          <span v-if="!hasCheckedIn && timeWindow.minCheckIn"
+            class="badge badge-outline badge-sm text-primary-content/80 border-primary-content/30">
+            Check-in mulai: {{ timeWindow.minCheckIn.slice(0, 5) }}
+          </span>
+          <span v-if="!hasCheckedIn && timeWindow.maxCheckIn"
+            class="badge badge-outline badge-sm text-primary-content/80 border-primary-content/30">
+            Batas check-in: {{ timeWindow.maxCheckIn.slice(0, 5) }}
+          </span>
+          <span v-if="hasCheckedIn && timeWindow.minCheckOut"
+            class="badge badge-outline badge-sm text-primary-content/80 border-primary-content/30">
+            Check-out mulai: {{ timeWindow.minCheckOut.slice(0, 5) }}
+          </span>
+          <span v-if="hasCheckedIn && timeWindow.maxCheckOut"
+            class="badge badge-outline badge-sm text-primary-content/80 border-primary-content/30">
+            Batas check-out: {{ timeWindow.maxCheckOut.slice(0, 5) }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -501,6 +570,14 @@ watch(location, () => {
             </div>
             
           </div>
+        </div>
+
+        <!-- Time Window Violation Alert -->
+        <div v-if="timeWindowViolation" class="alert alert-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{{ timeWindowViolation }}</span>
         </div>
 
         <!-- Error Alert -->

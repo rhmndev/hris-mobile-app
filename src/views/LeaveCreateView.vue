@@ -90,6 +90,34 @@ const checkLeaveOverlap = (startDate: string, endDate: string): { overlaps: any[
     }
 }
 
+// Collect all Sunday dates within a range (ISO date strings)
+const getSundayDates = (startDateStr: string, endDateStr: string): string[] => {
+    const sundays: string[] = []
+    const start = new Date(startDateStr)
+    const end = new Date(endDateStr)
+    const cursor = new Date(start)
+
+    while (cursor <= end) {
+        if (cursor.getDay() === 0) { // 0 = Sunday
+            // Format as dd-mm-YYYY
+            const dd = String(cursor.getDate()).padStart(2, '0')
+            const mm = String(cursor.getMonth() + 1).padStart(2, '0')
+            const yyyy = cursor.getFullYear()
+            sundays.push(`${dd}-${mm}-${yyyy}`)
+        }
+        cursor.setDate(cursor.getDate() + 1)
+    }
+    return sundays
+}
+
+// Computed: Sunday info message (informational, not an error)
+const sundayInfo = computed((): string | null => {
+    if (!form.value.startDate || !form.value.endDate) return null
+    const sundays = getSundayDates(form.value.startDate, form.value.endDate)
+    if (sundays.length === 0) return null
+    return `Hari Minggu (${sundays.join(', ')}) akan dilewati dan tidak dihitung sebagai hari cuti.`
+})
+
 // Validasi tanggal
 const validateDates = (): string[] => {
     const errors: string[] = []
@@ -319,6 +347,12 @@ loadInitialData()
                                 <input type="date" class="input input-bordered w-full" v-model="form.endDate" :min="todayDate">
                             </label>
                         </div>
+                        <p v-if="sundayInfo" class="text-xs text-info bg-info/10 rounded-lg p-2">
+                            &#x2139;&#xfe0f; {{ sundayInfo }}
+                        </p>
+                        <p v-else class="text-xs text-base-content/50">
+                            &#x2139;&#xfe0f; Hari Minggu dalam rentang tanggal akan dilewati secara otomatis.
+                        </p>
 
                         <!-- Alasan -->
                         <label for="" class="form-control">
